@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary: #003366;
+    --primary-dark: #002244;
+    --accent: #ffc107;
+  }
+}
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .print-page {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 1.5cm !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}

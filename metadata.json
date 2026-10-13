@@ -1,0 +1,6 @@
+{
+  "name": "RUE Primaria - MEDUCA Panamá",
+  "description": "Sistema Escolar Integral para Primaria MEDUCA: Gestión de estudiantes, docentes, notas diarias y asistencia PASE-U.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
