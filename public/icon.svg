@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="96" fill="#003366"/>
+  <rect x="24" y="24" width="464" height="464" rx="72" fill="none" stroke="#FFC107" stroke-width="12" stroke-opacity="0.8"/>
+  <path d="M256 96 L112 176 L256 256 L400 176 Z" fill="#FFC107"/>
+  <path d="M152 208 L152 304 C152 352 256 384 256 384 C256 384 360 352 360 304 L360 208 L256 266 Z" fill="#FFFFFF" fill-opacity="0.95"/>
+  <text x="256" y="440" font-size="76" text-anchor="middle" fill="#FFC107" font-family="system-ui, -apple-system, sans-serif" font-weight="900" letter-spacing="4">RUE</text>
+</svg>

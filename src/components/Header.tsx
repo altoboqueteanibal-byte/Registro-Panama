@@ -9,6 +9,7 @@ import {
   RotateCcw,
   Download,
 } from 'lucide-react';
+import { PWAInstallButton } from './pwa/PWAInstallButton';
 import { AppDatabase } from '../utils/storage';
 import { TRIMESTRES } from '../types';
 
@@ -158,6 +159,9 @@ export const Header: React.FC<HeaderProps> = ({
               <span>👨‍👩‍👧 Padres</span>
             </button>
           )}
+
+          {/* Botón de instalación PWA */}
+          <PWAInstallButton />
 
           {/* Actions */}
           <button

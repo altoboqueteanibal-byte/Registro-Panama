@@ -8,7 +8,9 @@ import {
   RotateCcw,
   Save,
   CheckCircle,
+  Smartphone,
 } from 'lucide-react';
+import { PWAInstallButton } from './pwa/PWAInstallButton';
 import { AppDatabase, reiniciarBaseDeDatos } from '../utils/storage';
 import { EscuelaConfig } from '../types';
 
@@ -203,6 +205,18 @@ export const ConfiguracionModal: React.FC<ConfiguracionModalProps> = ({
             </button>
           </div>
         </form>
+
+        {/* Sección de Instalación PWA */}
+        <div className="bg-blue-50/70 p-4 border-t border-blue-200 text-xs">
+          <div className="flex items-center gap-2 text-[#003366] font-bold mb-1">
+            <Smartphone className="w-4 h-4 text-[#003366]" />
+            <span>Aplicación Web Progresiva (PWA) e Instalación</span>
+          </div>
+          <p className="text-slate-600 mb-2 leading-relaxed text-[11px]">
+            Esta aplicación cumple con los estándares PWA de Google y Apple: se puede instalar en la pantalla de inicio de su teléfono celular, tablet o computadora, y funciona sin conexión a internet.
+          </p>
+          <PWAInstallButton variant="card" />
+        </div>
 
         {/* Sección de Gestión de Datos y Copias de Seguridad */}
         <div className="bg-slate-50 p-5 border-t border-slate-200 space-y-3 text-xs">
