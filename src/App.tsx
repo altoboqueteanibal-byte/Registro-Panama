@@ -6,7 +6,8 @@ import {
   AppDatabase,
 } from './utils/storage';
 import { Header } from './components/Header';
-import { Navbar, ViewType } from './components/Navbar';
+import { ViewType } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
 import { EstudiantesView } from './components/EstudiantesView';
 import { DocentesView } from './components/DocentesView';
@@ -16,6 +17,7 @@ import { BoletinesView } from './components/BoletinesView';
 import { ComunicadosAdminView } from './components/ComunicadosAdminView';
 import { PortalPadresView } from './components/portal-padres/PortalPadresView';
 import { LoginPadresModal } from './components/portal-padres/LoginPadresModal';
+import { AccionesRapidasModal } from './components/AccionesRapidasModal';
 import { BoletinModal } from './components/BoletinModal';
 import { CarnetModal } from './components/CarnetModal';
 import { ConfiguracionModal } from './components/ConfiguracionModal';
@@ -26,11 +28,22 @@ export default function App() {
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Estado del Menú Lateral Colapsable
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('rue_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState<boolean>(false);
+
   // Estado del Portal de Padres
   const [acudienteActivo, setAcudienteActivo] = useState<AcudienteUsuario | null>(null);
   const [loginPadresAbierto, setLoginPadresAbierto] = useState<boolean>(false);
 
   // Modales
+  const [accionesRapidasAbierto, setAccionesRapidasAbierto] = useState<boolean>(false);
   const [boletinEstudianteId, setBoletinEstudianteId] = useState<string | null>(null);
   const [carnetEstudianteId, setCarnetEstudianteId] = useState<string | null>(null);
   const [configuracionAbierta, setConfiguracionAbierta] = useState<boolean>(false);
@@ -45,6 +58,22 @@ export default function App() {
     setToastMessage(msg);
   };
 
+  const handleToggleCollapse = () => {
+    const nuevo = !isSidebarCollapsed;
+    setIsSidebarCollapsed(nuevo);
+    try {
+      localStorage.setItem('rue_sidebar_collapsed', String(nuevo));
+    } catch {}
+  };
+
+  const handleToggleSidebarHeader = () => {
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpenMobile((prev) => !prev);
+    } else {
+      handleToggleCollapse();
+    }
+  };
+
   useEffect(() => {
     if (toastMessage) {
       const timer = setTimeout(() => {
@@ -55,7 +84,7 @@ export default function App() {
   }, [toastMessage]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans pb-16 md:pb-8 selection:bg-blue-100">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-blue-100">
       {/* Header Institucional MEDUCA */}
       <Header
         db={db}
@@ -69,102 +98,148 @@ export default function App() {
           }
         }}
         onOpenPortalPadres={() => setLoginPadresAbierto(true)}
+        onOpenAccionesRapidas={() => setAccionesRapidasAbierto(true)}
+        onToggleSidebar={!acudienteActivo ? handleToggleSidebarHeader : undefined}
         esModoPadre={!!acudienteActivo}
       />
 
-      {/* Navegación administrativa solo visible si NO está en modo portal de padres */}
-      {!acudienteActivo && (
-        <Navbar
-          currentView={currentView}
-          onSelectView={setCurrentView}
-          onOpenPortalPadres={() => setLoginPadresAbierto(true)}
-        />
-      )}
-
-      {/* Contenido Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 no-print">
-        {/* VISTA PORTAL DE PADRES (Si hay acudiente autenticado) */}
-        {acudienteActivo ? (
-          <PortalPadresView
+      {/* Estructura con Menú Lateral Colapsable y Contenido */}
+      <div className="flex-1 flex w-full relative">
+        {/* Menú Lateral Colapsable (solo activo en modo institucional) */}
+        {!acudienteActivo && (
+          <Sidebar
+            currentView={currentView}
+            onSelectView={(v) => {
+              setCurrentView(v);
+              setIsSidebarOpenMobile(false);
+            }}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={handleToggleCollapse}
+            isOpenMobile={isSidebarOpenMobile}
+            onCloseMobile={() => setIsSidebarOpenMobile(false)}
+            onOpenPortalPadres={() => setLoginPadresAbierto(true)}
+            onOpenAccionesRapidas={() => setAccionesRapidasAbierto(true)}
+            onOpenConfig={() => setConfiguracionAbierta(true)}
             db={db}
-            acudiente={acudienteActivo}
-            onLogout={() => {
-              setAcudienteActivo(null);
-              showToast('👋 Sesión de acudiente cerrada');
-            }}
-            onSwitchToAdmin={() => {
-              setAcudienteActivo(null);
-              setCurrentView('dashboard');
-            }}
-            onOpenBoletin={(id) => setBoletinEstudianteId(id)}
-            onOpenCarnet={(id) => setCarnetEstudianteId(id)}
-            onUpdateDb={updateDb}
-            onShowToast={showToast}
           />
-        ) : (
-          /* VISTAS ADMINISTRATIVAS Y DOCENTES */
-          <>
-            {currentView === 'dashboard' && (
-              <DashboardView
-                db={db}
-                onNavigate={setCurrentView}
-                onSelectEstudianteParaBoletin={(id) => setBoletinEstudianteId(id)}
-              />
-            )}
+        )}
 
-            {currentView === 'estudiantes' && (
-              <EstudiantesView
+        {/* Área de Contenido Principal con espaciado dinámico según estado colapsado */}
+        <div
+          className={`flex-1 min-w-0 transition-all duration-300 ease-in-out pb-12 ${
+            !acudienteActivo
+              ? isSidebarCollapsed
+                ? 'lg:pl-[76px]'
+                : 'lg:pl-[268px]'
+              : ''
+          }`}
+        >
+          <main className="max-w-7xl w-full mx-auto p-3 sm:p-6 no-print">
+            {/* VISTA PORTAL DE PADRES (Si hay acudiente autenticado) */}
+            {acudienteActivo ? (
+              <PortalPadresView
                 db={db}
-                onUpdateDb={updateDb}
+                acudiente={acudienteActivo}
+                onLogout={() => {
+                  setAcudienteActivo(null);
+                  showToast('👋 Sesión de acudiente cerrada');
+                }}
+                onSwitchToAdmin={() => {
+                  setAcudienteActivo(null);
+                  setCurrentView('dashboard');
+                }}
                 onOpenBoletin={(id) => setBoletinEstudianteId(id)}
                 onOpenCarnet={(id) => setCarnetEstudianteId(id)}
-                onShowToast={showToast}
-              />
-            )}
-
-            {currentView === 'docentes' && (
-              <DocentesView
-                db={db}
                 onUpdateDb={updateDb}
                 onShowToast={showToast}
               />
-            )}
+            ) : (
+              /* VISTAS ADMINISTRATIVAS Y DOCENTES */
+              <>
+                {currentView === 'dashboard' && (
+                  <DashboardView
+                    db={db}
+                    onNavigate={setCurrentView}
+                    onSelectEstudianteParaBoletin={(id) => setBoletinEstudianteId(id)}
+                  />
+                )}
 
-            {currentView === 'notas' && (
-              <NotasView
-                db={db}
-                onUpdateDb={updateDb}
-                onShowToast={showToast}
-              />
-            )}
+                {currentView === 'estudiantes' && (
+                  <EstudiantesView
+                    db={db}
+                    onUpdateDb={updateDb}
+                    onOpenBoletin={(id) => setBoletinEstudianteId(id)}
+                    onOpenCarnet={(id) => setCarnetEstudianteId(id)}
+                    onShowToast={showToast}
+                  />
+                )}
 
-            {currentView === 'asistencia' && (
-              <AsistenciaView
-                db={db}
-                onUpdateDb={updateDb}
-                onShowToast={showToast}
-              />
-            )}
+                {currentView === 'docentes' && (
+                  <DocentesView
+                    db={db}
+                    onUpdateDb={updateDb}
+                    onShowToast={showToast}
+                  />
+                )}
 
-            {currentView === 'boletines' && (
-              <BoletinesView
-                db={db}
-                onOpenBoletin={(id) => setBoletinEstudianteId(id)}
-                onShowToast={showToast}
-              />
-            )}
+                {currentView === 'notas' && (
+                  <NotasView
+                    db={db}
+                    onUpdateDb={updateDb}
+                    onShowToast={showToast}
+                  />
+                )}
 
-            {currentView === 'comunicados' && (
-              <ComunicadosAdminView
-                db={db}
-                onUpdateDb={updateDb}
-                onShowToast={showToast}
-                onOpenPortalPadres={() => setLoginPadresAbierto(true)}
-              />
+                {currentView === 'asistencia' && (
+                  <AsistenciaView
+                    db={db}
+                    onUpdateDb={updateDb}
+                    onShowToast={showToast}
+                  />
+                )}
+
+                {currentView === 'boletines' && (
+                  <BoletinesView
+                    db={db}
+                    onOpenBoletin={(id) => setBoletinEstudianteId(id)}
+                    onShowToast={showToast}
+                  />
+                )}
+
+                {currentView === 'comunicados' && (
+                  <ComunicadosAdminView
+                    db={db}
+                    onUpdateDb={updateDb}
+                    onShowToast={showToast}
+                    onOpenPortalPadres={() => setLoginPadresAbierto(true)}
+                  />
+                )}
+              </>
             )}
-          </>
-        )}
-      </main>
+          </main>
+        </div>
+      </div>
+
+      {/* MODAL DE CENTRO DE ACCIONES RÁPIDAS */}
+      {accionesRapidasAbierto && (
+        <AccionesRapidasModal
+          db={db}
+          onUpdateDb={updateDb}
+          onClose={() => setAccionesRapidasAbierto(false)}
+          onOpenNuevoEstudiante={() => {
+            setCurrentView('estudiantes');
+            showToast('Abriendo directorio de estudiantes');
+          }}
+          onOpenNuevoComunicado={() => {
+            setCurrentView('comunicados');
+            showToast('Abriendo gestión de comunicados');
+          }}
+          onOpenPortalPadres={() => setLoginPadresAbierto(true)}
+          onOpenConfig={() => setConfiguracionAbierta(true)}
+          onNavigateToView={(v) => setCurrentView(v)}
+          onShowToast={showToast}
+        />
+      )}
 
       {/* Modal de Inicio de Sesión para Padres */}
       {loginPadresAbierto && (
@@ -208,7 +283,7 @@ export default function App() {
 
       {/* Notificación Toast flotante */}
       {toastMessage && (
-        <div className="fixed bottom-16 md:bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-2xl z-50 animate-in fade-in slide-in-from-bottom-2 duration-150 border border-slate-700 max-w-sm text-center">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-2xl z-50 animate-in fade-in slide-in-from-bottom-2 duration-150 border border-slate-700 max-w-sm text-center">
           {toastMessage}
         </div>
       )}

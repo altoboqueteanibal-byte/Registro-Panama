@@ -8,6 +8,8 @@ import {
   Layers,
   RotateCcw,
   Download,
+  Menu,
+  Zap,
 } from 'lucide-react';
 import { PWAInstallButton } from './pwa/PWAInstallButton';
 import { AppDatabase } from '../utils/storage';
@@ -19,6 +21,8 @@ interface HeaderProps {
   onOpenConfig: () => void;
   onResetDemo: () => void;
   onOpenPortalPadres?: () => void;
+  onOpenAccionesRapidas?: () => void;
+  onToggleSidebar?: () => void;
   esModoPadre?: boolean;
 }
 
@@ -28,6 +32,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenConfig,
   onResetDemo,
   onOpenPortalPadres,
+  onOpenAccionesRapidas,
+  onToggleSidebar,
   esModoPadre = false,
 }) => {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
@@ -72,25 +78,35 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* Logo and Titles */}
+      <div className="w-full px-4 py-2.5 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-3">
+        {/* Toggle Button + Logo and Titles */}
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#002244] to-[#004d99] border-2 border-[#FFC107] flex items-center justify-center shadow-inner shrink-0">
-            <School className="w-6 h-6 text-[#FFC107]" />
+          {onToggleSidebar && (
+            <button
+              onClick={onToggleSidebar}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition flex items-center justify-center border border-white/10 shrink-0"
+              title="Alternar Menú Lateral Colapsable"
+            >
+              <Menu className="w-5 h-5 text-amber-300" />
+            </button>
+          )}
+
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#002244] to-[#004d99] border-2 border-[#FFC107] flex items-center justify-center shadow-inner shrink-0">
+            <School className="w-5 h-5 text-[#FFC107]" />
           </div>
-          <div className="leading-tight">
+          <div className="leading-tight min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-xs tracking-wider uppercase text-amber-300 font-bold bg-[#002244]/80 px-2 py-0.5 rounded border border-amber-400/30">
+              <span className="text-[10px] tracking-wider uppercase text-amber-300 font-extrabold bg-[#002244]/80 px-2 py-0.5 rounded border border-amber-400/30">
                 MEDUCA Panamá
               </span>
               <span className="text-[10px] text-blue-200 hidden sm:inline">
                 RUE Primaria v2.4
               </span>
             </div>
-            <h1 className="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            <h1 className="text-sm sm:text-base font-bold tracking-tight text-white truncate mt-0.5">
               {db.escuela.nombrePlantel}
             </h1>
-            <p className="text-xs text-blue-200 hidden sm:block">
+            <p className="text-[11px] text-blue-200 hidden sm:block truncate">
               {db.escuela.regionEducativa} &bull; Código SIACE: {db.escuela.codigoSiace}
             </p>
           </div>
@@ -148,6 +164,18 @@ export const Header: React.FC<HeaderProps> = ({
               </>
             )}
           </div>
+
+          {/* Acciones Rápidas Modal button */}
+          {onOpenAccionesRapidas && !esModoPadre && (
+            <button
+              onClick={onOpenAccionesRapidas}
+              className="flex items-center gap-1 bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/40 px-2.5 py-1.5 rounded-lg transition font-bold"
+              title="Abrir Centro de Acciones Rápidas (Modal)"
+            >
+              <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
+              <span className="hidden sm:inline">Acciones</span>
+            </button>
+          )}
 
           {/* Portal de Padres button */}
           {onOpenPortalPadres && !esModoPadre && (
