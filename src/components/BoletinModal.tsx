@@ -22,6 +22,7 @@ import {
   MATERIAS_CONSEJERO,
   MATERIAS_ESPECIALES,
   TODAS_MATERIAS,
+  SUBMATERIAS_TECNOLOGIA,
 } from '../types';
 
 interface BoletinModalProps {
@@ -257,14 +258,15 @@ export const BoletinModal: React.FC<BoletinModalProps> = ({
                   );
                 })}
 
-                {/* 2. Asignaturas Especiales */}
+                {/* 2. Asignaturas Especiales y Área Tecnológica */}
                 <tr className="bg-slate-100 font-bold text-slate-700 text-[10px] uppercase tracking-wider">
                   <td colSpan={6} className="py-1 px-3">
-                    Asignaturas Especiales y Complementarias
+                    Asignaturas Especiales y Complementarias (Plan Primaria MEDUCA)
                   </td>
                 </tr>
 
-                {MATERIAS_ESPECIALES.map((materia) => {
+                {/* Inglés y Educación Física */}
+                {(['Inglés', 'Educación Física'] as const).map((materia) => {
                   const t1 = calcularPromedioTrimestre(estudiante.id, materia, 1, db.calificaciones, db.annoLectivo);
                   const t2 = calcularPromedioTrimestre(estudiante.id, materia, 2, db.calificaciones, db.annoLectivo);
                   const t3 = calcularPromedioTrimestre(estudiante.id, materia, 3, db.calificaciones, db.annoLectivo);
@@ -307,6 +309,93 @@ export const BoletinModal: React.FC<BoletinModalProps> = ({
                     </tr>
                   );
                 })}
+
+                {/* TECNOLOGÍA: Asignatura Oficial Unificada */}
+                {(() => {
+                  const t1 = calcularPromedioTrimestre(estudiante.id, 'Tecnología', 1, db.calificaciones, db.annoLectivo);
+                  const t2 = calcularPromedioTrimestre(estudiante.id, 'Tecnología', 2, db.calificaciones, db.annoLectivo);
+                  const t3 = calcularPromedioTrimestre(estudiante.id, 'Tecnología', 3, db.calificaciones, db.annoLectivo);
+                  const anual = calcularPromedioMateriaAnual(estudiante.id, 'Tecnología', db.calificaciones, db.annoLectivo);
+
+                  return (
+                    <>
+                      <tr className="bg-amber-50/50 hover:bg-amber-50/80 font-bold border-t border-b border-amber-200">
+                        <td className="py-2 px-3 text-slate-900 border-r border-slate-200">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-amber-800">Tecnología</span>
+                            <span className="text-[9px] font-black uppercase bg-amber-200 text-amber-900 px-1.5 py-0.2 rounded border border-amber-300">
+                              Nota Unificada
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-normal text-slate-500 block">
+                            (Unificación trimestral de Ed. para el Hogar, Agropecuaria e Informática)
+                          </span>
+                        </td>
+                        <td className="py-2 px-2 text-center border-r border-slate-200 font-black text-slate-900">
+                          {t1 !== null ? t1.toFixed(1) : '—'}
+                        </td>
+                        <td className="py-2 px-2 text-center border-r border-slate-200 font-black text-slate-900">
+                          {t2 !== null ? t2.toFixed(1) : '—'}
+                        </td>
+                        <td className="py-2 px-2 text-center border-r border-slate-200 font-black text-slate-900">
+                          {t3 !== null ? t3.toFixed(1) : '—'}
+                        </td>
+                        <td className="py-2 px-2 text-center font-black border-r border-slate-200 bg-amber-100/60">
+                          {anual !== null ? (
+                            <span className={anual >= 3.0 ? 'text-slate-950 font-black' : 'text-rose-600 font-black'}>
+                              {anual.toFixed(1)}
+                            </span>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-[11px]">
+                          {anual !== null ? (
+                            anual >= 3.0 ? (
+                              <span className="text-emerald-700 font-bold">Aprobada (Oficial)</span>
+                            ) : (
+                              <span className="text-rose-700 font-bold">Reprobada</span>
+                            )
+                          ) : (
+                            <span className="text-slate-400">En curso</span>
+                          )}
+                        </td>
+                      </tr>
+
+                      {/* Desglose individual de las 3 áreas evaluadas por los docentes especiales */}
+                      {SUBMATERIAS_TECNOLOGIA.map((sub) => {
+                        const st1 = calcularPromedioTrimestre(estudiante.id, sub, 1, db.calificaciones, db.annoLectivo);
+                        const st2 = calcularPromedioTrimestre(estudiante.id, sub, 2, db.calificaciones, db.annoLectivo);
+                        const st3 = calcularPromedioTrimestre(estudiante.id, sub, 3, db.calificaciones, db.annoLectivo);
+                        const sanual = calcularPromedioMateriaAnual(estudiante.id, sub, db.calificaciones, db.annoLectivo);
+
+                        return (
+                          <tr key={sub} className="bg-slate-50/60 text-slate-600 text-[11px]">
+                            <td className="py-1 px-3 pl-7 italic border-r border-slate-200 flex items-center gap-1">
+                              <span className="text-slate-400 font-mono">↳</span>
+                              <span>{sub} (Evaluación Docente Especial)</span>
+                            </td>
+                            <td className="py-1 px-2 text-center border-r border-slate-200 font-mono">
+                              {st1 !== null ? st1.toFixed(1) : '—'}
+                            </td>
+                            <td className="py-1 px-2 text-center border-r border-slate-200 font-mono">
+                              {st2 !== null ? st2.toFixed(1) : '—'}
+                            </td>
+                            <td className="py-1 px-2 text-center border-r border-slate-200 font-mono">
+                              {st3 !== null ? st3.toFixed(1) : '—'}
+                            </td>
+                            <td className="py-1 px-2 text-center border-r border-slate-200 font-mono">
+                              {sanual !== null ? sanual.toFixed(1) : '—'}
+                            </td>
+                            <td className="py-1 px-3 text-[10px] text-slate-500 italic">
+                              Sub-área individual
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </>
+                  );
+                })()}
 
                 {/* FILA DE PROMEDIOS GENERALES */}
                 <tr className="bg-[#003366]/10 font-bold text-slate-900">

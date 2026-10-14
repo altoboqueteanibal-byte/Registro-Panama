@@ -30,6 +30,8 @@ import {
   MATERIAS_CONSEJERO,
   MATERIAS_ESPECIALES,
   JustificacionAusencia,
+  ASIGNATURAS_OFICIALES_BOLETIN,
+  SUBMATERIAS_TECNOLOGIA,
 } from '../../types';
 import { AppDatabase } from '../../utils/storage';
 import {
@@ -38,6 +40,7 @@ import {
   calcularPromedioMateriaAnual,
   calcularPromedioGeneralAnual,
   calcularAsistenciaEstudiante,
+  obtenerDesgloseTecnologia,
 } from '../../utils/calculations';
 
 interface PortalPadresViewProps {
@@ -462,7 +465,12 @@ export const PortalPadresView: React.FC<PortalPadresViewProps> = ({
           </div>
 
           <div className="space-y-2.5">
-            {TODAS_MATERIAS.map((materia) => {
+            {ASIGNATURAS_OFICIALES_BOLETIN.map((materia) => {
+              const esTecnologia = materia === 'Tecnología';
+              const desgloseTec = esTecnologia
+                ? obtenerDesgloseTecnologia(hijoSeleccionado.id, db.trimestreActual, db.calificaciones, db.annoLectivo)
+                : null;
+
               const cal = db.calificaciones.find(
                 (c) =>
                   c.estudianteId === hijoSeleccionado.id &&
@@ -484,23 +492,36 @@ export const PortalPadresView: React.FC<PortalPadresViewProps> = ({
               return (
                 <div
                   key={materia}
-                  className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden transition"
+                  className={`bg-white rounded-xl border shadow-xs overflow-hidden transition ${
+                    esTecnologia ? 'border-amber-300' : 'border-slate-200'
+                  }`}
                 >
                   {/* Fila principal de la materia */}
                   <div
                     onClick={() =>
                       setMateriaExpandida(estaExpandida ? null : materia)
                     }
-                    className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition"
+                    className={`p-3.5 flex items-center justify-between cursor-pointer transition ${
+                      esTecnologia ? 'bg-amber-50/40 hover:bg-amber-50/80' : 'hover:bg-slate-50'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-blue-50 text-[#003366]">
+                      <div className={`p-2 rounded-lg ${esTecnologia ? 'bg-amber-100 text-amber-900' : 'bg-blue-50 text-[#003366]'}`}>
                         <BookOpen className="w-4 h-4" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-xs text-slate-800">{materia}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-xs text-slate-800">{materia}</h4>
+                          {esTecnologia && (
+                            <span className="text-[9px] font-black uppercase bg-amber-200 text-amber-900 px-1.5 py-0.2 rounded border border-amber-300">
+                              Unificación Trimestral
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[10px] text-slate-400">
-                          {notasDiarias.length} actividad(es) evaluada(s)
+                          {esTecnologia
+                            ? `3 sub-áreas: Hogar, Agropecuaria e Informática (${desgloseTec?.evaluadasCount || 0}/3 evaluadas)`
+                            : `${notasDiarias.length} actividad(es) evaluada(s)`}
                         </span>
                       </div>
                     </div>
@@ -528,49 +549,150 @@ export const PortalPadresView: React.FC<PortalPadresViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Desglose de notas diarias expandido */}
+                  {/* Desglose de notas expandido */}
                   {estaExpandida && (
-                    <div className="bg-slate-50/80 p-4 border-t border-slate-100 space-y-2 text-xs">
-                      <p className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
-                        Desglose de Notas Diarias Registradas
-                      </p>
+                    <div className="bg-slate-50/80 p-4 border-t border-slate-100 space-y-3 text-xs">
+                      {esTecnologia ? (
+                        /* Desglose especial de Tecnología con sus 3 sub-áreas */
+                        <div className="space-y-3">
+                          <div className="bg-amber-100/60 border border-amber-300 rounded-xl p-2.5 text-[11px] text-amber-950 font-medium">
+                            📘 <strong>Normativa Primaria MEDUCA:</strong> Los docentes especiales de <strong>Educación para el Hogar</strong>, <strong>Agropecuaria</strong> e <strong>Informática</strong> evalúan individualmente el trabajo del estudiante y sus notas se unifican al final de cada trimestre en la materia oficial de <strong>Tecnología</strong>.
+                          </div>
 
-                      {notasDiarias.length === 0 ? (
-                        <p className="text-slate-400 italic text-[11px] py-2">
-                          El docente aún no ha registrado notas diarias para esta materia en el trimestre actual.
-                        </p>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {notasDiarias.map((nota) => (
-                            <div
-                              key={nota.id}
-                              className="bg-white p-2.5 rounded-lg border border-slate-200 flex items-center justify-between gap-2 shadow-2xs"
-                            >
-                              <div className="min-w-0">
-                                <span className="font-bold text-slate-800 block truncate">
-                                  {nota.desc}
-                                </span>
-                                <span className="text-[10px] text-slate-400">
-                                  Fecha: {nota.fecha}
-                                </span>
-                                {nota.observacion && (
-                                  <p className="text-[10px] text-slate-500 italic mt-0.5">
-                                    Nota del docente: {nota.observacion}
-                                  </p>
-                                )}
-                              </div>
-                              <span
-                                className={`text-sm font-black px-2 py-0.5 rounded shrink-0 ${
-                                  nota.valor >= 3.0
-                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                    : 'bg-rose-50 text-rose-800 border border-rose-200'
-                                }`}
-                              >
-                                {nota.valor.toFixed(1)}
-                              </span>
-                            </div>
-                          ))}
+                          <div className="grid grid-cols-1 gap-3">
+                            {SUBMATERIAS_TECNOLOGIA.map((sub, sIdx) => {
+                              const iconEmoji = sIdx === 0 ? '🏠' : sIdx === 1 ? '🌱' : '💻';
+                              const subCal = db.calificaciones.find(
+                                (c) =>
+                                  c.estudianteId === hijoSeleccionado.id &&
+                                  (c.materia === sub || (sub === 'Informática' && c.materia === 'Tecnología e Informática')) &&
+                                  c.trimestre === db.trimestreActual &&
+                                  c.annoLectivo === db.annoLectivo
+                              );
+                              const subNotas = subCal?.notasDiarias || [];
+                              const subProm = calcularPromedioTrimestre(
+                                hijoSeleccionado.id,
+                                sub,
+                                db.trimestreActual,
+                                db.calificaciones,
+                                db.annoLectivo
+                              );
+
+                              return (
+                                <div key={sub} className="bg-white rounded-xl border border-slate-200 p-3 shadow-2xs space-y-2">
+                                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-base">{iconEmoji}</span>
+                                      <div>
+                                        <h5 className="font-bold text-xs text-slate-800">{sub}</h5>
+                                        <span className="text-[10px] text-slate-400">
+                                          Docente Especial &bull; {subNotas.length} nota(s) registrada(s)
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="text-[10px] text-slate-400 block font-semibold">Promedio</span>
+                                      <span
+                                        className={`font-black text-xs px-2 py-0.5 rounded ${
+                                          subProm !== null && subProm >= 3.0
+                                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                            : subProm !== null
+                                            ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                                            : 'bg-slate-100 text-slate-400'
+                                        }`}
+                                      >
+                                        {subProm !== null ? subProm.toFixed(2) : 'Sin notas'}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {subNotas.length === 0 ? (
+                                    <p className="text-slate-400 italic text-[11px] py-1">
+                                      Sin actividades evaluadas en este trimestre.
+                                    </p>
+                                  ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                      {subNotas.map((nota) => (
+                                        <div
+                                          key={nota.id}
+                                          className="bg-slate-50 p-2 rounded-lg border border-slate-200 flex items-center justify-between gap-2"
+                                        >
+                                          <div className="min-w-0">
+                                            <span className="font-bold text-slate-800 block truncate text-[11px]">
+                                              {nota.desc}
+                                            </span>
+                                            <span className="text-[10px] text-slate-400">
+                                              Fecha: {nota.fecha}
+                                            </span>
+                                            {nota.observacion && (
+                                              <p className="text-[10px] text-slate-500 italic mt-0.5">
+                                                {nota.observacion}
+                                              </p>
+                                            )}
+                                          </div>
+                                          <span
+                                            className={`text-xs font-black px-2 py-0.5 rounded shrink-0 ${
+                                              nota.valor >= 3.0
+                                                ? 'bg-emerald-100 text-emerald-800'
+                                                : 'bg-rose-100 text-rose-800'
+                                            }`}
+                                          >
+                                            {nota.valor.toFixed(1)}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
+                      ) : (
+                        /* Desglose estándar para las demás asignaturas */
+                        <>
+                          <p className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
+                            Desglose de Notas Diarias Registradas
+                          </p>
+
+                          {notasDiarias.length === 0 ? (
+                            <p className="text-slate-400 italic text-[11px] py-2">
+                              El docente aún no ha registrado notas diarias para esta materia en el trimestre actual.
+                            </p>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {notasDiarias.map((nota) => (
+                                <div
+                                  key={nota.id}
+                                  className="bg-white p-2.5 rounded-lg border border-slate-200 flex items-center justify-between gap-2 shadow-2xs"
+                                >
+                                  <div className="min-w-0">
+                                    <span className="font-bold text-slate-800 block truncate">
+                                      {nota.desc}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400">
+                                      Fecha: {nota.fecha}
+                                    </span>
+                                    {nota.observacion && (
+                                      <p className="text-[10px] text-slate-500 italic mt-0.5">
+                                        Nota del docente: {nota.observacion}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`text-sm font-black px-2 py-0.5 rounded shrink-0 ${
+                                      nota.valor >= 3.0
+                                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                        : 'bg-rose-50 text-rose-800 border border-rose-200'
+                                    }`}
+                                  >
+                                    {nota.valor.toFixed(1)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   )}

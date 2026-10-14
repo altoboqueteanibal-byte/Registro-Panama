@@ -113,17 +113,43 @@ export const MATERIAS_CONSEJERO = [
   'Religión, Moral y Valores',
 ] as const;
 
+// Sub-áreas evaluadas individualmente por los docentes especiales (Componentes del Área Tecnológica MEDUCA)
+export const SUBMATERIAS_TECNOLOGIA = [
+  'Educación para el Hogar',
+  'Agropecuaria',
+  'Informática',
+] as const;
+
+export type SubmateriaTecnologia = (typeof SUBMATERIAS_TECNOLOGIA)[number];
+
+// Materia oficial unificada en el boletín y cuadro de calificaciones
+export const MATERIA_TECNOLOGIA_UNIFICADA = 'Tecnología';
+
 export const MATERIAS_ESPECIALES = [
   'Inglés',
   'Educación Física',
   'Educación para el Hogar',
   'Agropecuaria',
-  'Tecnología e Informática',
+  'Informática',
+  'Tecnología',
+] as const;
+
+// 9 Asignaturas oficiales del plan de estudios de Primaria MEDUCA para el Boletín y GPA
+export const ASIGNATURAS_OFICIALES_BOLETIN = [
+  ...MATERIAS_CONSEJERO,
+  'Inglés',
+  'Educación Física',
+  'Tecnología',
 ] as const;
 
 export const TODAS_MATERIAS = [
   ...MATERIAS_CONSEJERO,
-  ...MATERIAS_ESPECIALES,
+  'Inglés',
+  'Educación Física',
+  'Educación para el Hogar',
+  'Agropecuaria',
+  'Informática',
+  'Tecnología',
 ] as const;
 
 export const GRADOS = ['1°', '2°', '3°', '4°', '5°', '6°'] as const;

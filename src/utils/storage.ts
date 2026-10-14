@@ -329,7 +329,7 @@ export const DOCENTES_INICIALES: Docente[] = [
     correo: 'javier.atencio@meduca.edu.pa',
     pin: '1234',
     tipo: 'especial',
-    materias: ['Educación Física', 'Agropecuaria'],
+    materias: ['Educación Física', 'Agropecuaria', 'Tecnología'],
     gruposAsignados: [
       { grado: '1°', grupo: 'A' },
       { grado: '3°', grupo: 'A' },
@@ -345,13 +345,29 @@ export const DOCENTES_INICIALES: Docente[] = [
     correo: 'mayra.montenegro@meduca.edu.pa',
     pin: '1234',
     tipo: 'especial',
-    materias: ['Educación para el Hogar', 'Tecnología e Informática'],
+    materias: ['Educación para el Hogar', 'Tecnología'],
     gruposAsignados: [
       { grado: '3°', grupo: 'A' },
       { grado: '4°', grupo: 'B' },
       { grado: '6°', grupo: 'A' },
     ],
     telefono: '6733-4411',
+  },
+  {
+    id: 'doc_206',
+    nombre: 'Prof. Rolando Batista Vega',
+    cedula: '4-198-732',
+    correo: 'rolando.batista@meduca.edu.pa',
+    pin: '1234',
+    tipo: 'especial',
+    materias: ['Informática', 'Tecnología'],
+    gruposAsignados: [
+      { grado: '1°', grupo: 'A' },
+      { grado: '3°', grupo: 'A' },
+      { grado: '4°', grupo: 'B' },
+      { grado: '6°', grupo: 'A' },
+    ],
+    telefono: '6744-9011',
   },
 ];
 
@@ -404,6 +420,40 @@ export const CALIFICACIONES_INICIALES: CalificacionMateria[] = [
       { id: 'nd_11', fecha: '2026-03-28', valor: 4.6, desc: 'Tarea en casa', observacion: 'Numbers and colors' },
     ],
   },
+  // Sub-áreas evaluadas individualmente que se unifican en TECNOLOGÍA:
+  {
+    id: 'cal_04_hogar',
+    estudianteId: 'est_101',
+    materia: 'Educación para el Hogar',
+    trimestre: 1,
+    annoLectivo: '2026',
+    notasDiarias: [
+      { id: 'nd_h1', fecha: '2026-03-16', valor: 4.8, desc: 'Trabajo en clase', observacion: 'Higiene y nutrición familiar' },
+      { id: 'nd_h2', fecha: '2026-03-30', valor: 4.6, desc: 'Proyecto formativo', observacion: 'Álbum de grupos de alimentos' },
+    ],
+  },
+  {
+    id: 'cal_04_agro',
+    estudianteId: 'est_101',
+    materia: 'Agropecuaria',
+    trimestre: 1,
+    annoLectivo: '2026',
+    notasDiarias: [
+      { id: 'nd_a1', fecha: '2026-03-17', valor: 4.7, desc: 'Laboratorio / Taller', observacion: 'Huerto escolar: siembra de hortalizas' },
+      { id: 'nd_a2', fecha: '2026-03-31', valor: 4.5, desc: 'Revisión de cuaderno', observacion: 'Tipos de suelos de Boquete' },
+    ],
+  },
+  {
+    id: 'cal_04_info',
+    estudianteId: 'est_101',
+    materia: 'Informática',
+    trimestre: 1,
+    annoLectivo: '2026',
+    notasDiarias: [
+      { id: 'nd_i1', fecha: '2026-03-19', valor: 5.0, desc: 'Laboratorio / Taller', observacion: 'Partes de la computadora y periféricos' },
+      { id: 'nd_i2', fecha: '2026-04-02', valor: 4.9, desc: 'Trabajo en clase', observacion: 'Práctica de mecanografía infantil' },
+    ],
+  },
   // Sofía Valdés (3° A)
   {
     id: 'cal_05',
@@ -428,6 +478,36 @@ export const CALIFICACIONES_INICIALES: CalificacionMateria[] = [
       { id: 'nd_16', fecha: '2026-03-22', valor: 4.8, desc: 'Dictado y caligrafía' },
     ],
   },
+  {
+    id: 'cal_06_hogar',
+    estudianteId: 'est_102',
+    materia: 'Educación para el Hogar',
+    trimestre: 1,
+    annoLectivo: '2026',
+    notasDiarias: [
+      { id: 'nd_h3', fecha: '2026-03-16', valor: 5.0, desc: 'Trabajo en clase', observacion: 'Valores en el hogar' },
+    ],
+  },
+  {
+    id: 'cal_06_agro',
+    estudianteId: 'est_102',
+    materia: 'Agropecuaria',
+    trimestre: 1,
+    annoLectivo: '2026',
+    notasDiarias: [
+      { id: 'nd_a3', fecha: '2026-03-17', valor: 4.9, desc: 'Trabajo en clase', observacion: 'Cuidado de plantas del huerto' },
+    ],
+  },
+  {
+    id: 'cal_06_info',
+    estudianteId: 'est_102',
+    materia: 'Informática',
+    trimestre: 1,
+    annoLectivo: '2026',
+    notasDiarias: [
+      { id: 'nd_i3', fecha: '2026-03-19', valor: 4.8, desc: 'Laboratorio / Taller', observacion: 'Herramientas de dibujo digital' },
+    ],
+  },
   // Carlos Rodríguez (3° A - en riesgo)
   {
     id: 'cal_07',
@@ -450,6 +530,36 @@ export const CALIFICACIONES_INICIALES: CalificacionMateria[] = [
     notasDiarias: [
       { id: 'nd_20', fecha: '2026-03-12', valor: 3.2, desc: 'Lectura comprensiva' },
       { id: 'nd_21', fecha: '2026-03-22', valor: 2.9, desc: 'Dictado y caligrafía' },
+    ],
+  },
+  {
+    id: 'cal_08_hogar',
+    estudianteId: 'est_103',
+    materia: 'Educación para el Hogar',
+    trimestre: 1,
+    annoLectivo: '2026',
+    notasDiarias: [
+      { id: 'nd_h4', fecha: '2026-03-16', valor: 3.6, desc: 'Trabajo en clase' },
+    ],
+  },
+  {
+    id: 'cal_08_agro',
+    estudianteId: 'est_103',
+    materia: 'Agropecuaria',
+    trimestre: 1,
+    annoLectivo: '2026',
+    notasDiarias: [
+      { id: 'nd_a4', fecha: '2026-03-17', valor: 3.8, desc: 'Laboratorio / Taller', observacion: 'Participación en vivero' },
+    ],
+  },
+  {
+    id: 'cal_08_info',
+    estudianteId: 'est_103',
+    materia: 'Informática',
+    trimestre: 1,
+    annoLectivo: '2026',
+    notasDiarias: [
+      { id: 'nd_i4', fecha: '2026-03-19', valor: 4.2, desc: 'Trabajo en clase', observacion: 'Uso del ratón y teclado' },
     ],
   },
 ];
@@ -496,12 +606,32 @@ export function cargarBaseDeDatos(): AppDatabase {
             correo: doc.correo || docInit?.correo || `${doc.nombre.toLowerCase().replace(/[^a-z0-9]/g, '.')}@meduca.edu.pa`,
             pin: doc.pin || '1234',
             gruposAsignados: doc.gruposAsignados || docInit?.gruposAsignados || (doc.tipo === 'especial' ? [{ grado: '1°', grupo: 'A' }, { grado: '3°', grupo: 'A' }, { grado: '4°', grupo: 'B' }, { grado: '6°', grupo: 'A' }] : undefined),
+            materias: docInit?.materias || doc.materias,
           };
         });
+
+        // Asegurar que todos los docentes oficiales existan
+        DOCENTES_INICIALES.forEach((initDoc) => {
+          if (!docentesHidratados.some((d: any) => d.id === initDoc.id)) {
+            docentesHidratados.push(initDoc);
+          }
+        });
+
+        // Si la base almacenada no tiene notas de las sub-áreas de tecnología, incorporar las iniciales
+        let calificacionesHidratadas = parsed.calificaciones || [];
+        const tieneSubmaterias = calificacionesHidratadas.some(
+          (c: any) => c.materia === 'Educación para el Hogar' || c.materia === 'Agropecuaria' || c.materia === 'Informática'
+        );
+        if (!tieneSubmaterias) {
+          calificacionesHidratadas = [...calificacionesHidratadas, ...CALIFICACIONES_INICIALES.filter(
+            (c) => c.materia === 'Educación para el Hogar' || c.materia === 'Agropecuaria' || c.materia === 'Informática'
+          )];
+        }
 
         return {
           ...parsed,
           docentes: docentesHidratados.length > 0 ? docentesHidratados : DOCENTES_INICIALES,
+          calificaciones: calificacionesHidratadas,
           acudientes: parsed.acudientes && parsed.acudientes.length > 0 ? parsed.acudientes : ACUDIENTES_INICIALES,
           comunicados: parsed.comunicados && parsed.comunicados.length > 0 ? parsed.comunicados : COMUNICADOS_INICIALES,
           justificaciones: parsed.justificaciones ? parsed.justificaciones : JUSTIFICACIONES_INICIALES,

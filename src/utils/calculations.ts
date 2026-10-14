@@ -3,11 +3,143 @@ import {
   AsistenciaRegistro,
   TRIMESTRES,
   TODAS_MATERIAS,
+  SUBMATERIAS_TECNOLOGIA,
+  MATERIA_TECNOLOGIA_UNIFICADA,
+  ASIGNATURAS_OFICIALES_BOLETIN,
 } from '../types';
+
+export interface DesgloseSubmateriaTecnologia {
+  nombre: string;
+  promedio: number | null;
+  notasCount: number;
+}
+
+export interface DesgloseTecnologia {
+  estudianteId: string;
+  trimestre: number;
+  submaterias: DesgloseSubmateriaTecnologia[];
+  promedioUnificado: number | null;
+  evaluadasCount: number;
+  totalSubmaterias: number;
+  completo: boolean;
+}
+
+/**
+ * Normaliza nombres de materias para permitir alias como "Tecnología e Informática" -> "Informática"
+ */
+export function normalizarNombreMateria(materia: string): string {
+  if (materia === 'Tecnología e Informática') return 'Informática';
+  return materia;
+}
+
+/**
+ * Obtiene el registro de calificación de una sub-materia o materia considerando alias.
+ */
+function buscarCalificacion(
+  estId: string,
+  materia: string,
+  trimestre: number,
+  calificaciones: CalificacionMateria[],
+  annoLectivo: string
+): CalificacionMateria | undefined {
+  return calificaciones.find((c) => {
+    if (c.estudianteId !== estId || c.trimestre !== trimestre || c.annoLectivo !== annoLectivo) {
+      return false;
+    }
+    if (c.materia === materia) return true;
+    if (materia === 'Informática' && (c.materia === 'Tecnología e Informática' || c.materia === 'Informatica')) {
+      return true;
+    }
+    if (materia === 'Educación para el Hogar' && (c.materia === 'Educacion para el Hogar' || c.materia === 'Hogar')) {
+      return true;
+    }
+    return false;
+  });
+}
+
+/**
+ * Obtiene el desglose detallado de las 3 áreas del componente Tecnológico:
+ * - Educación para el Hogar
+ * - Agropecuaria
+ * - Informática
+ * y calcula su nota unificada de trimestre.
+ */
+export function obtenerDesgloseTecnologia(
+  estId: string,
+  trimestre: number,
+  calificaciones: CalificacionMateria[],
+  annoLectivo: string
+): DesgloseTecnologia {
+  const desgloseSubmaterias: DesgloseSubmateriaTecnologia[] = SUBMATERIAS_TECNOLOGIA.map((sub) => {
+    const cal = buscarCalificacion(estId, sub, trimestre, calificaciones, annoLectivo);
+    if (!cal || !cal.notasDiarias || cal.notasDiarias.length === 0) {
+      return {
+        nombre: sub,
+        promedio: null,
+        notasCount: 0,
+      };
+    }
+    const suma = cal.notasDiarias.reduce((acc, curr) => acc + curr.valor, 0);
+    const prom = Number((suma / cal.notasDiarias.length).toFixed(2));
+    return {
+      nombre: sub,
+      promedio: prom,
+      notasCount: cal.notasDiarias.length,
+    };
+  });
+
+  const promsValidos = desgloseSubmaterias
+    .map((s) => s.promedio)
+    .filter((p): p is number => p !== null);
+
+  let promedioUnificado: number | null = null;
+  if (promsValidos.length > 0) {
+    const suma = promsValidos.reduce((acc, val) => acc + val, 0);
+    promedioUnificado = Number((suma / promsValidos.length).toFixed(2));
+  } else {
+    // Si no hay notas en las sub-materias, verificar si existe una calificación directa en "Tecnología"
+    const directCal = calificaciones.find(
+      (c) =>
+        c.estudianteId === estId &&
+        c.materia === MATERIA_TECNOLOGIA_UNIFICADA &&
+        c.trimestre === trimestre &&
+        c.annoLectivo === annoLectivo
+    );
+    if (directCal && directCal.notasDiarias && directCal.notasDiarias.length > 0) {
+      const suma = directCal.notasDiarias.reduce((acc, curr) => acc + curr.valor, 0);
+      promedioUnificado = Number((suma / directCal.notasDiarias.length).toFixed(2));
+    }
+  }
+
+  return {
+    estudianteId: estId,
+    trimestre,
+    submaterias: desgloseSubmaterias,
+    promedioUnificado,
+    evaluadasCount: promsValidos.length,
+    totalSubmaterias: SUBMATERIAS_TECNOLOGIA.length,
+    completo: promsValidos.length === SUBMATERIAS_TECNOLOGIA.length,
+  };
+}
+
+/**
+ * Calcula el promedio unificado de Tecnología para un trimestre.
+ * Unifica las notas de Educación para el Hogar, Agropecuaria e Informática.
+ */
+export function calcularPromedioTecnologiaTrimestre(
+  estId: string,
+  trimestre: number,
+  calificaciones: CalificacionMateria[],
+  annoLectivo: string
+): number | null {
+  const desglose = obtenerDesgloseTecnologia(estId, trimestre, calificaciones, annoLectivo);
+  return desglose.promedioUnificado;
+}
 
 /**
  * Calcula el promedio de una materia en un trimestre específico
  * basado exclusivamente en sus notas diarias (Normativa Primaria MEDUCA).
+ * Si la materia es "Tecnología", unifica automáticamente las notas de Hogar, Agropecuaria e Informática.
  */
 export function calcularPromedioTrimestre(
   estId: string,
@@ -16,13 +148,11 @@ export function calcularPromedioTrimestre(
   calificaciones: CalificacionMateria[],
   annoLectivo: string
 ): number | null {
-  const cal = calificaciones.find(
-    (c) =>
-      c.estudianteId === estId &&
-      c.materia === materia &&
-      c.trimestre === trimestre &&
-      c.annoLectivo === annoLectivo
-  );
+  if (materia === 'Tecnología' || materia === MATERIA_TECNOLOGIA_UNIFICADA) {
+    return calcularPromedioTecnologiaTrimestre(estId, trimestre, calificaciones, annoLectivo);
+  }
+
+  const cal = buscarCalificacion(estId, materia, trimestre, calificaciones, annoLectivo);
 
   if (!cal || !cal.notasDiarias || cal.notasDiarias.length === 0) {
     return null;
@@ -51,7 +181,8 @@ export function calcularPromedioMateriaAnual(
 }
 
 /**
- * Calcula el promedio general del estudiante en un trimestre dado considerando todas las materias evaluadas.
+ * Calcula el promedio general del estudiante en un trimestre dado considerando
+ * las 9 asignaturas oficiales de Primaria MEDUCA (donde Tecnología es la unificación de Hogar, Agropecuaria e Informática).
  */
 export function calcularPromedioGeneralTrimestre(
   estId: string,
@@ -59,7 +190,7 @@ export function calcularPromedioGeneralTrimestre(
   calificaciones: CalificacionMateria[],
   annoLectivo: string
 ): number | null {
-  const proms = TODAS_MATERIAS.map((m) =>
+  const proms = ASIGNATURAS_OFICIALES_BOLETIN.map((m) =>
     calcularPromedioTrimestre(estId, m, trimestre, calificaciones, annoLectivo)
   ).filter((p): p is number => p !== null);
 
@@ -69,14 +200,14 @@ export function calcularPromedioGeneralTrimestre(
 }
 
 /**
- * Calcula el promedio general anual del estudiante.
+ * Calcula el promedio general anual del estudiante en las asignaturas oficiales de Primaria MEDUCA.
  */
 export function calcularPromedioGeneralAnual(
   estId: string,
   calificaciones: CalificacionMateria[],
   annoLectivo: string
 ): number | null {
-  const proms = TODAS_MATERIAS.map((m) =>
+  const proms = ASIGNATURAS_OFICIALES_BOLETIN.map((m) =>
     calcularPromedioMateriaAnual(estId, m, calificaciones, annoLectivo)
   ).filter((p): p is number => p !== null);
 

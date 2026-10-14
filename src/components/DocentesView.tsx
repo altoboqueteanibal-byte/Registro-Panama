@@ -251,8 +251,11 @@ export const DocentesView: React.FC<DocentesViewProps> = ({
             <span>Docentes Especiales (Áreas Complementarias)</span>
           </div>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Imparten asignaturas transversales en diferentes grados:
-            Inglés, Educación Física, Educación para el Hogar, Agropecuaria, y Tecnología e Informática.
+            Imparten asignaturas transversales en múltiples grupos:
+            Inglés, Educación Física, Educación para el Hogar, Agropecuaria, e Informática.
+            <span className="block mt-1 text-[11px] font-medium text-amber-900 bg-amber-100/60 p-1.5 rounded-lg border border-amber-200">
+              ⚡ <strong>Normativa MEDUCA:</strong> Educación para el Hogar, Agropecuaria e Informática se evalúan de forma individual y al final de cada trimestre unifican sus calificaciones en una sola materia oficial: <strong>Tecnología</strong>.
+            </span>
           </p>
         </div>
       </div>
