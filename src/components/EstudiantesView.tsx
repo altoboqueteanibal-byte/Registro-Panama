@@ -13,7 +13,7 @@ import {
   AlertCircle,
   X,
 } from 'lucide-react';
-import { Estudiante, GRADOS, GRUPOS } from '../types';
+import { Estudiante, GRADOS, GRUPOS, Docente } from '../types';
 import { AppDatabase } from '../utils/storage';
 import {
   calcularPromedioGeneralTrimestre,
@@ -26,6 +26,7 @@ interface EstudiantesViewProps {
   onOpenBoletin: (estudianteId: string) => void;
   onOpenCarnet: (estudianteId: string) => void;
   onShowToast: (msg: string) => void;
+  docenteActivo?: Docente | null;
 }
 
 export const EstudiantesView: React.FC<EstudiantesViewProps> = ({
@@ -34,6 +35,7 @@ export const EstudiantesView: React.FC<EstudiantesViewProps> = ({
   onOpenBoletin,
   onOpenCarnet,
   onShowToast,
+  docenteActivo = null,
 }) => {
   const [filtroTexto, setFiltroTexto] = useState('');
   const [filtroGrado, setFiltroGrado] = useState<string>('todos');
@@ -152,8 +154,28 @@ export const EstudiantesView: React.FC<EstudiantesViewProps> = ({
     onShowToast('🗑️ Estudiante eliminado del sistema');
   };
 
-  // Filtrado
+  // Filtrado según permisos de grupos asignados del docente
+  const esConsejero = docenteActivo?.tipo === 'consejero';
+  const esEspecial = docenteActivo?.tipo === 'especial';
+
+  const perteneceAGrupoDocente = (e: Estudiante) => {
+    if (!docenteActivo) return true;
+    if (esConsejero) {
+      const gTutor = docenteActivo.gradoTutor || '3°';
+      const grpTutor = docenteActivo.grupoTutor || 'A';
+      return e.grado === gTutor && e.grupo === grpTutor;
+    }
+    if (esEspecial) {
+      const grupos = docenteActivo.gruposAsignados || [];
+      if (grupos.length === 0) return true;
+      return grupos.some((g) => g.grado === e.grado && g.grupo === e.grupo);
+    }
+    return true;
+  };
+
   const estudiantesFiltrados = db.estudiantes.filter((e) => {
+    if (!perteneceAGrupoDocente(e)) return false;
+
     const coincideTexto =
       e.nombre.toLowerCase().includes(filtroTexto.toLowerCase()) ||
       e.cedula.toLowerCase().includes(filtroTexto.toLowerCase()) ||
@@ -167,6 +189,27 @@ export const EstudiantesView: React.FC<EstudiantesViewProps> = ({
 
   return (
     <div className="space-y-5">
+      {/* Banner de acceso de docente a sus grupos */}
+      {docenteActivo && (
+        <div className="bg-amber-50 border border-amber-300 p-3 rounded-xl text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-xs">
+          <div className="leading-tight">
+            <span className="font-extrabold text-amber-950 block">
+              {esConsejero ? (
+                <>🎓 Vista Docente Consejero: <strong>{docenteActivo.nombre}</strong> — Alumnos de su grupo a cargo ({docenteActivo.gradoTutor} &ldquo;{docenteActivo.grupoTutor}&rdquo;)</>
+              ) : (
+                <>⭐ Vista Docente Especial: <strong>{docenteActivo.nombre}</strong> — Alumnos de sus <strong>{docenteActivo.gruposAsignados?.length || 0} grupos asignados</strong> ({docenteActivo.materias.join(', ')})</>
+              )}
+            </span>
+            <span className="text-[11px] text-amber-800">
+              Acceso institucional restringido a estudiantes de sus grupos oficiales.
+            </span>
+          </div>
+          <span className="text-[11px] font-mono text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 font-bold shrink-0">
+            {docenteActivo.correo}
+          </span>
+        </div>
+      )}
+
       {/* Barra de cabecera con botón de agregar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
         <div>
@@ -175,7 +218,9 @@ export const EstudiantesView: React.FC<EstudiantesViewProps> = ({
             Directorio de Estudiantes Matriculados
           </h2>
           <p className="text-xs text-slate-500">
-            Total en registro: {db.estudiantes.length} estudiantes &bull; Nivel Primaria (1° a 6°)
+            {docenteActivo
+              ? `Mostrando ${estudiantesFiltrados.length} estudiantes en grupos asignados al educador`
+              : `Total en registro: ${db.estudiantes.length} estudiantes • Nivel Primaria (1° a 6°)`}
           </p>
         </div>
 

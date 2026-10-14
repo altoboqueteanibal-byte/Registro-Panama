@@ -10,7 +10,7 @@ import {
   ShieldCheck,
   User,
 } from 'lucide-react';
-import { GRADOS, GRUPOS } from '../types';
+import { GRADOS, GRUPOS, Docente, GrupoAsignado } from '../types';
 import { AppDatabase } from '../utils/storage';
 import {
   calcularPromedioGeneralTrimestre,
@@ -22,16 +22,51 @@ interface BoletinesViewProps {
   db: AppDatabase;
   onOpenBoletin: (estudianteId: string) => void;
   onShowToast: (msg: string) => void;
+  docenteActivo?: Docente | null;
 }
 
 export const BoletinesView: React.FC<BoletinesViewProps> = ({
   db,
   onOpenBoletin,
   onShowToast,
+  docenteActivo = null,
 }) => {
-  const [gradoSeleccionado, setGradoSeleccionado] = useState<string>('3°');
-  const [grupoSeleccionado, setGrupoSeleccionado] = useState<string>('A');
+  const esConsejero = docenteActivo?.tipo === 'consejero';
+  const esEspecial = docenteActivo?.tipo === 'especial';
+
+  const gruposDocente: GrupoAsignado[] = esConsejero
+    ? [{ grado: docenteActivo.gradoTutor || '3°', grupo: docenteActivo.grupoTutor || 'A' }]
+    : esEspecial && docenteActivo.gruposAsignados && docenteActivo.gruposAsignados.length > 0
+    ? docenteActivo.gruposAsignados
+    : [];
+
+  const defaultGrado = esConsejero
+    ? docenteActivo.gradoTutor || '3°'
+    : esEspecial && gruposDocente.length > 0
+    ? gruposDocente[0].grado
+    : '3°';
+
+  const defaultGrupo = esConsejero
+    ? docenteActivo.grupoTutor || 'A'
+    : esEspecial && gruposDocente.length > 0
+    ? gruposDocente[0].grupo
+    : 'A';
+
+  const [gradoSeleccionado, setGradoSeleccionado] = useState<string>(defaultGrado);
+  const [grupoSeleccionado, setGrupoSeleccionado] = useState<string>(defaultGrupo);
   const [busqueda, setBusqueda] = useState('');
+
+  React.useEffect(() => {
+    if (docenteActivo) {
+      if (esConsejero && docenteActivo.gradoTutor && docenteActivo.grupoTutor) {
+        setGradoSeleccionado(docenteActivo.gradoTutor);
+        setGrupoSeleccionado(docenteActivo.grupoTutor);
+      } else if (esEspecial && gruposDocente.length > 0) {
+        setGradoSeleccionado(gruposDocente[0].grado);
+        setGrupoSeleccionado(gruposDocente[0].grupo);
+      }
+    }
+  }, [docenteActivo]);
 
   const estudiantesFiltrados = db.estudiantes.filter((e) => {
     const coincideGrado = e.grado === gradoSeleccionado;
@@ -44,6 +79,22 @@ export const BoletinesView: React.FC<BoletinesViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Banner docente */}
+      {docenteActivo && (
+        <div className="bg-amber-50 border border-amber-300 p-2.5 rounded-xl text-xs flex items-center justify-between gap-2">
+          <span className="text-amber-950 font-bold">
+            {esConsejero ? (
+              <>🎓 Emisión de Boletines: <strong>{docenteActivo.nombre}</strong> — Grupo asignado de consejería ({docenteActivo.gradoTutor} &ldquo;{docenteActivo.grupoTutor}&rdquo;)</>
+            ) : (
+              <>⭐ Emisión de Boletines: <strong>{docenteActivo.nombre}</strong> — <strong>{gruposDocente.length} grupos asignados</strong> ({docenteActivo.materias.join(', ')})</>
+            )}
+          </span>
+          <span className="text-[11px] font-mono text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 shrink-0">
+            {docenteActivo.correo}
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
@@ -58,29 +109,53 @@ export const BoletinesView: React.FC<BoletinesViewProps> = ({
 
         {/* Filtros rápidos */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <select
-            value={gradoSeleccionado}
-            onChange={(e) => setGradoSeleccionado(e.target.value)}
-            className="p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700"
-          >
-            {GRADOS.map((g) => (
-              <option key={g} value={g}>
-                Grado {g}
-              </option>
-            ))}
-          </select>
+          {docenteActivo && esConsejero ? (
+            <div className="p-2 bg-slate-100 border border-slate-300 rounded-lg font-bold text-slate-800">
+              Grado {gradoSeleccionado} &ldquo;{grupoSeleccionado}&rdquo; (Consejería)
+            </div>
+          ) : docenteActivo && esEspecial ? (
+            <select
+              value={`${gradoSeleccionado}-${grupoSeleccionado}`}
+              onChange={(e) => {
+                const [g, grp] = e.target.value.split('-');
+                setGradoSeleccionado(g);
+                setGrupoSeleccionado(grp);
+              }}
+              className="p-2 bg-amber-50 border border-amber-300 rounded-lg outline-none font-bold text-slate-800"
+            >
+              {gruposDocente.map((ga) => (
+                <option key={`${ga.grado}-${ga.grupo}`} value={`${ga.grado}-${ga.grupo}`}>
+                  Grado {ga.grado} &ldquo;{ga.grupo}&rdquo;
+                </option>
+              ))}
+            </select>
+          ) : (
+            <>
+              <select
+                value={gradoSeleccionado}
+                onChange={(e) => setGradoSeleccionado(e.target.value)}
+                className="p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700"
+              >
+                {GRADOS.map((g) => (
+                  <option key={g} value={g}>
+                    Grado {g}
+                  </option>
+                ))}
+              </select>
 
-          <select
-            value={grupoSeleccionado}
-            onChange={(e) => setGrupoSeleccionado(e.target.value)}
-            className="p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700"
-          >
-            {GRUPOS.map((g) => (
-              <option key={g} value={g}>
-                Grupo {g}
-              </option>
-            ))}
-          </select>
+              <select
+                value={grupoSeleccionado}
+                onChange={(e) => setGrupoSeleccionado(e.target.value)}
+                className="p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700"
+              >
+                {GRUPOS.map((g) => (
+                  <option key={g} value={g}>
+                    Grupo {g}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
         </div>
       </div>
 

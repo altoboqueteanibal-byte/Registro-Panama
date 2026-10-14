@@ -21,7 +21,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { ViewType } from './Navbar';
-import { AppDatabase } from '../utils/storage';
+import { AppDatabase, obtenerDocenteOfflineRegistrado } from '../utils/storage';
 import { Docente } from '../types';
 
 interface SidebarProps {
@@ -58,6 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Conteo de estudiantes y comunicados
   const totalEstudiantes = db.estudiantes.length;
   const totalComunicados = db.comunicados.length;
+  const docenteOffline = obtenerDocenteOfflineRegistrado();
 
   const gruposNavegacion = [
     {
@@ -360,6 +361,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                 )}
               </div>
+            ) : docenteOffline ? (
+              <button
+                onClick={() => {
+                  onOpenLoginDocente();
+                  if (isOpenMobile) onCloseMobile();
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 hover:text-white border border-emerald-400/30 transition-all group relative ${
+                  isCollapsed && !isOpenMobile ? 'justify-center px-0' : ''
+                }`}
+                title={`Dispositivo registrado para ${docenteOffline.nombre} (${docenteOffline.correo}). Entrada 1 clic offline`}
+              >
+                <Sparkles className="w-4 h-4 text-amber-300 shrink-0 group-hover:scale-110 transition-transform" />
+                {(!isCollapsed || isOpenMobile) && (
+                  <div className="text-left flex-1 min-w-0">
+                    <span className="block text-xs font-black truncate text-emerald-100">
+                      Entrada Offline (1 Clic)
+                    </span>
+                    <span className="block text-[9px] text-emerald-300/80 truncate font-mono">
+                      {docenteOffline.nombre.split(' ')[0]} &bull; {docenteOffline.tipo === 'consejero' ? 'Consejero' : 'Especial'}
+                    </span>
+                  </div>
+                )}
+              </button>
             ) : (
               <button
                 onClick={() => {
@@ -369,7 +393,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-200 hover:text-white border border-blue-400/20 transition-all group relative ${
                   isCollapsed && !isOpenMobile ? 'justify-center px-0' : ''
                 }`}
-                title="Acceso Oficial para Educadores con correo institucional"
+                title="Acceso Oficial para Educadores con correo institucional @meduca.edu.pa"
               >
                 <GraduationCap className="w-4 h-4 text-amber-300 shrink-0 group-hover:scale-110 transition-transform" />
                 {(!isCollapsed || isOpenMobile) && (

@@ -4,6 +4,8 @@ import {
   guardarBaseDeDatos,
   reiniciarBaseDeDatos,
   AppDatabase,
+  obtenerSesionDocenteActiva,
+  guardarSesionDocenteActiva,
 } from './utils/storage';
 import { Header } from './components/Header';
 import { ViewType } from './components/Navbar';
@@ -45,12 +47,23 @@ export default function App() {
   const [loginPadresAbierto, setLoginPadresAbierto] = useState<boolean>(false);
 
   // Estado de Sesión Oficial de Docentes (@meduca.edu.pa)
-  const [docenteActivo, setDocenteActivo] = useState<Docente | null>(null);
-  const [grupoActivoDocente, setGrupoActivoDocente] = useState<GrupoAsignado>({
-    grado: '3°',
-    grupo: 'A',
+  const [docenteActivo, setDocenteActivo] = useState<Docente | null>(() => {
+    return obtenerSesionDocenteActiva();
+  });
+  const [grupoActivoDocente, setGrupoActivoDocente] = useState<GrupoAsignado>(() => {
+    const sesion = obtenerSesionDocenteActiva();
+    if (sesion) {
+      return sesion.tipo === 'consejero'
+        ? { grado: sesion.gradoTutor || '3°', grupo: sesion.grupoTutor || 'A' }
+        : sesion.gruposAsignados?.[0] || { grado: '1°', grupo: 'A' };
+    }
+    return {
+      grado: '3°',
+      grupo: 'A',
+    };
   });
   const [loginDocenteAbierto, setLoginDocenteAbierto] = useState<boolean>(false);
+  const [correoLoginDocente, setCorreoLoginDocente] = useState<string | null>(null);
 
   // Modales
   const [accionesRapidasAbierto, setAccionesRapidasAbierto] = useState<boolean>(false);
@@ -70,12 +83,14 @@ export default function App() {
 
   const handleLoginDocente = (docente: Docente) => {
     setDocenteActivo(docente);
+    guardarSesionDocenteActiva(docente);
     const grupoInicial: GrupoAsignado =
       docente.tipo === 'consejero'
         ? { grado: docente.gradoTutor || '3°', grupo: docente.grupoTutor || 'A' }
         : docente.gruposAsignados?.[0] || { grado: '1°', grupo: 'A' };
     setGrupoActivoDocente(grupoInicial);
     setLoginDocenteAbierto(false);
+    setCorreoLoginDocente(null);
     showToast(`👋 ¡Bienvenido(a), ${docente.nombre}! Aula virtual activa`);
     if (currentView === 'dashboard' || currentView === 'docentes') {
       setCurrentView('notas');
@@ -84,7 +99,13 @@ export default function App() {
 
   const handleLogoutDocente = () => {
     setDocenteActivo(null);
+    guardarSesionDocenteActiva(null);
     showToast('👋 Sesión docente cerrada. Modo administración general activo');
+  };
+
+  const handleAbrirLoginDocenteConCorreo = (correo: string) => {
+    setCorreoLoginDocente(correo);
+    setLoginDocenteAbierto(true);
   };
 
   const handleToggleCollapse = () => {
@@ -215,6 +236,7 @@ export default function App() {
                     onOpenBoletin={(id) => setBoletinEstudianteId(id)}
                     onOpenCarnet={(id) => setCarnetEstudianteId(id)}
                     onShowToast={showToast}
+                    docenteActivo={docenteActivo}
                   />
                 )}
 
@@ -225,6 +247,7 @@ export default function App() {
                     onShowToast={showToast}
                     docenteActivo={docenteActivo}
                     onLoginDocente={handleLoginDocente}
+                    onOpenLoginDocenteConCorreo={handleAbrirLoginDocenteConCorreo}
                   />
                 )}
 
@@ -255,6 +278,7 @@ export default function App() {
                     db={db}
                     onOpenBoletin={(id) => setBoletinEstudianteId(id)}
                     onShowToast={showToast}
+                    docenteActivo={docenteActivo}
                   />
                 )}
 
@@ -311,8 +335,12 @@ export default function App() {
       {loginDocenteAbierto && (
         <LoginDocenteModal
           db={db}
+          correoInicial={correoLoginDocente || ''}
           onSuccessLogin={handleLoginDocente}
-          onClose={() => setLoginDocenteAbierto(false)}
+          onClose={() => {
+            setLoginDocenteAbierto(false);
+            setCorreoLoginDocente(null);
+          }}
           onShowToast={showToast}
         />
       )}

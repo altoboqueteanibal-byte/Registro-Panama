@@ -553,3 +553,59 @@ export function reiniciarBaseDeDatos(): AppDatabase {
   guardarBaseDeDatos(resetDb);
   return resetDb;
 }
+
+// -------------------------------------------------------------
+// Persistencia de Dispositivo Offline Registrado para Docentes
+// -------------------------------------------------------------
+export const OFFLINE_DOCENTE_DEVICE_KEY = 'rue_dispositivo_docente_offline';
+export const SESION_DOCENTE_KEY = 'rue_sesion_docente_activa';
+
+export function obtenerDocenteOfflineRegistrado(): Docente | null {
+  try {
+    const raw = localStorage.getItem(OFFLINE_DOCENTE_DEVICE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as Docente;
+  } catch (err) {
+    console.error('Error leyendo docente offline registrado:', err);
+    return null;
+  }
+}
+
+export function guardarDocenteOfflineRegistrado(docente: Docente): void {
+  try {
+    localStorage.setItem(OFFLINE_DOCENTE_DEVICE_KEY, JSON.stringify(docente));
+  } catch (err) {
+    console.error('Error guardando docente offline registrado:', err);
+  }
+}
+
+export function desvincularDocenteOffline(): void {
+  try {
+    localStorage.removeItem(OFFLINE_DOCENTE_DEVICE_KEY);
+  } catch (err) {
+    console.error('Error desvinculando docente offline:', err);
+  }
+}
+
+export function obtenerSesionDocenteActiva(): Docente | null {
+  try {
+    const raw = localStorage.getItem(SESION_DOCENTE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as Docente;
+  } catch {
+    return null;
+  }
+}
+
+export function guardarSesionDocenteActiva(docente: Docente | null): void {
+  try {
+    if (docente) {
+      localStorage.setItem(SESION_DOCENTE_KEY, JSON.stringify(docente));
+    } else {
+      localStorage.removeItem(SESION_DOCENTE_KEY);
+    }
+  } catch (err) {
+    console.error('Error guardando sesión activa docente:', err);
+  }
+}
+

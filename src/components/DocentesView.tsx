@@ -24,7 +24,7 @@ import {
   GRUPOS,
   GrupoAsignado,
 } from '../types';
-import { AppDatabase } from '../utils/storage';
+import { AppDatabase, obtenerDocenteOfflineRegistrado } from '../utils/storage';
 
 interface DocentesViewProps {
   db: AppDatabase;
@@ -32,6 +32,7 @@ interface DocentesViewProps {
   onShowToast: (msg: string) => void;
   docenteActivo?: Docente | null;
   onLoginDocente?: (doc: Docente) => void;
+  onOpenLoginDocenteConCorreo?: (correo: string) => void;
 }
 
 export const DocentesView: React.FC<DocentesViewProps> = ({
@@ -40,9 +41,11 @@ export const DocentesView: React.FC<DocentesViewProps> = ({
   onShowToast,
   docenteActivo = null,
   onLoginDocente,
+  onOpenLoginDocenteConCorreo,
 }) => {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [docenteAEditar, setDocenteAEditar] = useState<Docente | null>(null);
+  const docenteOfflineRegistrado = obtenerDocenteOfflineRegistrado();
 
   // Form states
   const [formNombre, setFormNombre] = useState('');
@@ -365,22 +368,38 @@ export const DocentesView: React.FC<DocentesViewProps> = ({
 
               {/* Botones de acción */}
               <div className="flex items-center justify-between gap-1 mt-4 pt-3 border-t border-slate-100">
-                {onLoginDocente && (
-                  docenteActivo?.id === doc.id ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-300">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Sesión Activa</span>
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => onLoginDocente(doc)}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#003366] hover:bg-[#002244] px-2.5 py-1 rounded-lg transition shadow-xs"
-                      title={`Ingresar al aula virtual como ${doc.nombre}`}
-                    >
-                      <LogIn className="w-3.5 h-3.5 text-[#FFC107]" />
-                      <span>Ingresar al Aula</span>
-                    </button>
-                  )
+                {/* Acceso oficial: solo 1 clic si ya se registró en este dispositivo offline */}
+                {docenteActivo?.id === doc.id ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-300">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Sesión Activa</span>
+                  </span>
+                ) : docenteOfflineRegistrado &&
+                  (docenteOfflineRegistrado.id === doc.id ||
+                    docenteOfflineRegistrado.correo === doc.correo) ? (
+                  <button
+                    onClick={() => onLoginDocente && onLoginDocente(doc)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 px-2.5 py-1 rounded-lg transition shadow-xs"
+                    title={`Dispositivo vinculado para ${doc.nombre}. Acceso 1 clic offline disponible`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Entrar (1 Clic Offline)</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (onOpenLoginDocenteConCorreo) {
+                        onOpenLoginDocenteConCorreo(doc.correo);
+                      } else if (onLoginDocente) {
+                        onLoginDocente(doc);
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#003366] bg-blue-50 hover:bg-blue-100 border border-blue-300 px-2.5 py-1 rounded-lg transition shadow-xs"
+                    title={`Validar correo institucional y PIN para ${doc.nombre}`}
+                  >
+                    <KeyRound className="w-3.5 h-3.5 text-[#003366]" />
+                    <span>Acceder con Correo</span>
+                  </button>
                 )}
 
                 <div className="flex items-center gap-1 ml-auto">
