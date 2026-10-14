@@ -63,14 +63,24 @@ export interface Estudiante {
   fechaNacimiento?: string;
 }
 
+export interface GrupoAsignado {
+  grado: string; // '1°' to '6°'
+  grupo: string; // 'A', 'B', 'C', 'D'
+}
+
 export interface Docente {
   id: string;
   nombre: string;
   cedula: string;
+  correo: string; // Correo institucional registrado (@meduca.edu.pa)
+  pin: string; // PIN de acceso
   tipo: 'consejero' | 'especial';
   materias: string[];
+  // Para maestro consejero (1 grupo específico):
   gradoTutor?: string;
   grupoTutor?: string;
+  // Para docentes especiales (acceso a múltiples grupos):
+  gruposAsignados?: GrupoAsignado[];
   telefono?: string;
 }
 

@@ -16,9 +16,13 @@ import {
   ShieldCheck,
   X,
   Sparkles,
+  LogOut,
+  Layers,
+  CheckCircle2,
 } from 'lucide-react';
 import { ViewType } from './Navbar';
 import { AppDatabase } from '../utils/storage';
+import { Docente } from '../types';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -28,6 +32,9 @@ interface SidebarProps {
   isOpenMobile: boolean;
   onCloseMobile: () => void;
   onOpenPortalPadres: () => void;
+  onOpenLoginDocente: () => void;
+  onLogoutDocente?: () => void;
+  docenteActivo?: Docente | null;
   onOpenAccionesRapidas: () => void;
   onOpenConfig: () => void;
   db: AppDatabase;
@@ -41,6 +48,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpenMobile,
   onCloseMobile,
   onOpenPortalPadres,
+  onOpenLoginDocente,
+  onLogoutDocente,
+  docenteActivo = null,
   onOpenAccionesRapidas,
   onOpenConfig,
   db,
@@ -272,6 +282,109 @@ export const Sidebar: React.FC<SidebarProps> = ({
               })}
             </div>
           ))}
+
+          {/* ACCESO OFICIAL AULA VIRTUAL DOCENTE */}
+          <div className="pt-2 border-t border-blue-800/40">
+            {(!isCollapsed || isOpenMobile) && (
+              <div className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-blue-300/80 flex items-center justify-between">
+                <span>Aula Docente</span>
+                {docenteActivo && (
+                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-mono">
+                    Conectado
+                  </span>
+                )}
+              </div>
+            )}
+
+            {docenteActivo ? (
+              <div
+                className={`rounded-xl border transition-all ${
+                  isCollapsed && !isOpenMobile
+                    ? 'p-2 bg-emerald-950/40 border-emerald-500/40 text-center relative group'
+                    : 'p-2.5 bg-gradient-to-r from-blue-900/60 to-[#002244] border-blue-400/30'
+                }`}
+              >
+                {isCollapsed && !isOpenMobile ? (
+                  <button
+                    onClick={onOpenLoginDocente}
+                    className="w-full flex flex-col items-center justify-center gap-1 text-emerald-400"
+                    title={`Docente activo: ${docenteActivo.nombre} (${docenteActivo.correo})`}
+                  >
+                    <GraduationCap className="w-5 h-5 text-amber-300" />
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-xl border border-slate-700">
+                      <p className="font-bold">{docenteActivo.nombre}</p>
+                      <p className="text-[10px] text-blue-300 font-mono">{docenteActivo.correo}</p>
+                    </div>
+                  </button>
+                ) : (
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-extrabold text-white truncate text-[11px]">
+                        {docenteActivo.nombre}
+                      </span>
+                      <span
+                        className={`text-[8px] font-black uppercase px-1 py-0.2 rounded shrink-0 ${
+                          docenteActivo.tipo === 'consejero'
+                            ? 'bg-blue-400/20 text-blue-200 border border-blue-400/30'
+                            : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                        }`}
+                      >
+                        {docenteActivo.tipo === 'consejero' ? 'Consejero' : 'Especial'}
+                      </span>
+                    </div>
+
+                    <p className="text-[10px] text-blue-200 font-mono truncate">
+                      {docenteActivo.correo}
+                    </p>
+
+                    <div className="flex items-center gap-1 pt-1 border-t border-blue-800/40">
+                      <button
+                        onClick={onOpenLoginDocente}
+                        className="flex-1 text-[10px] bg-white/10 hover:bg-white/20 text-white font-bold py-1 px-1.5 rounded transition text-center"
+                        title="Cambiar de docente o revisar grupos"
+                      >
+                        Cambiar
+                      </button>
+                      {onLogoutDocente && (
+                        <button
+                          onClick={onLogoutDocente}
+                          className="text-[10px] bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-bold py-1 px-2 rounded transition flex items-center gap-1"
+                          title="Cerrar sesión de docente"
+                        >
+                          <LogOut className="w-3 h-3" />
+                          <span>Salir</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  onOpenLoginDocente();
+                  if (isOpenMobile) onCloseMobile();
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-200 hover:text-white border border-blue-400/20 transition-all group relative ${
+                  isCollapsed && !isOpenMobile ? 'justify-center px-0' : ''
+                }`}
+                title="Acceso Oficial para Educadores con correo institucional"
+              >
+                <GraduationCap className="w-4 h-4 text-amber-300 shrink-0 group-hover:scale-110 transition-transform" />
+                {(!isCollapsed || isOpenMobile) && (
+                  <div className="text-left flex-1 min-w-0">
+                    <span className="block text-xs font-black truncate">
+                      Ingreso Docente
+                    </span>
+                    <span className="block text-[9px] text-blue-300/70 truncate font-mono">
+                      @meduca.edu.pa
+                    </span>
+                  </div>
+                )}
+              </button>
+            )}
+          </div>
 
           {/* ACCESO ESPECIAL AL PORTAL DE PADRES */}
           <div className="pt-2 border-t border-blue-800/40">

@@ -10,10 +10,11 @@ import {
   Download,
   Menu,
   Zap,
+  GraduationCap,
 } from 'lucide-react';
 import { PWAInstallButton } from './pwa/PWAInstallButton';
 import { AppDatabase } from '../utils/storage';
-import { TRIMESTRES } from '../types';
+import { TRIMESTRES, Docente } from '../types';
 
 interface HeaderProps {
   db: AppDatabase;
@@ -21,6 +22,8 @@ interface HeaderProps {
   onOpenConfig: () => void;
   onResetDemo: () => void;
   onOpenPortalPadres?: () => void;
+  onOpenLoginDocente?: () => void;
+  docenteActivo?: Docente | null;
   onOpenAccionesRapidas?: () => void;
   onToggleSidebar?: () => void;
   esModoPadre?: boolean;
@@ -32,6 +35,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenConfig,
   onResetDemo,
   onOpenPortalPadres,
+  onOpenLoginDocente,
+  docenteActivo = null,
   onOpenAccionesRapidas,
   onToggleSidebar,
   esModoPadre = false,
@@ -174,6 +179,28 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
               <span className="hidden sm:inline">Acciones</span>
+            </button>
+          )}
+
+          {/* Acceso Docente Oficial button */}
+          {onOpenLoginDocente && !esModoPadre && (
+            <button
+              onClick={onOpenLoginDocente}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition font-extrabold shadow-xs text-xs ${
+                docenteActivo
+                  ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300'
+                  : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+              }`}
+              title={
+                docenteActivo
+                  ? `Sesión activa: ${docenteActivo.nombre} (${docenteActivo.correo})`
+                  : 'Ingreso oficial para Educadores con correo @meduca.edu.pa'
+              }
+            >
+              <GraduationCap className={`w-3.5 h-3.5 ${docenteActivo ? 'text-slate-950' : 'text-amber-300'}`} />
+              <span className="hidden sm:inline">
+                {docenteActivo ? docenteActivo.nombre.split(' ')[0] : 'Docentes'}
+              </span>
             </button>
           )}
 

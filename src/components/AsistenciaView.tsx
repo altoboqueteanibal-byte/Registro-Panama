@@ -16,6 +16,8 @@ import {
   GRUPOS,
   ESTADOS_ASISTENCIA,
   AsistenciaRegistro,
+  Docente,
+  GrupoAsignado,
 } from '../types';
 import { AppDatabase } from '../utils/storage';
 import { calcularAsistenciaEstudiante } from '../utils/calculations';
@@ -24,19 +26,60 @@ interface AsistenciaViewProps {
   db: AppDatabase;
   onUpdateDb: (db: AppDatabase) => void;
   onShowToast: (msg: string) => void;
+  docenteActivo?: Docente | null;
+  grupoActivoDocente?: GrupoAsignado;
+  onSelectGrupoActivoDocente?: (grupo: GrupoAsignado) => void;
 }
 
 export const AsistenciaView: React.FC<AsistenciaViewProps> = ({
   db,
   onUpdateDb,
   onShowToast,
+  docenteActivo = null,
+  grupoActivoDocente,
+  onSelectGrupoActivoDocente,
 }) => {
-  const [gradoSeleccionado, setGradoSeleccionado] = useState<string>('3°');
-  const [grupoSeleccionado, setGrupoSeleccionado] = useState<string>('A');
+  const esConsejero = docenteActivo?.tipo === 'consejero';
+  const esEspecial = docenteActivo?.tipo === 'especial';
+
+  const gruposPermitidos: GrupoAsignado[] = docenteActivo
+    ? esConsejero
+      ? [{ grado: docenteActivo.gradoTutor || '3°', grupo: docenteActivo.grupoTutor || 'A' }]
+      : docenteActivo.gruposAsignados && docenteActivo.gruposAsignados.length > 0
+      ? docenteActivo.gruposAsignados
+      : [{ grado: '1°', grupo: 'A' }]
+    : [];
+
+  const defaultGrado = docenteActivo
+    ? esConsejero
+      ? docenteActivo.gradoTutor || '3°'
+      : grupoActivoDocente?.grado || gruposPermitidos[0]?.grado || '1°'
+    : '3°';
+
+  const defaultGrupo = docenteActivo
+    ? esConsejero
+      ? docenteActivo.grupoTutor || 'A'
+      : grupoActivoDocente?.grupo || gruposPermitidos[0]?.grupo || 'A'
+    : 'A';
+
+  const [gradoSeleccionado, setGradoSeleccionado] = useState<string>(defaultGrado);
+  const [grupoSeleccionado, setGrupoSeleccionado] = useState<string>(defaultGrupo);
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
   const [pestana, setPestana] = useState<'pase' | 'paseu'>('pase');
+
+  React.useEffect(() => {
+    if (docenteActivo) {
+      if (esConsejero && docenteActivo.gradoTutor && docenteActivo.grupoTutor) {
+        setGradoSeleccionado(docenteActivo.gradoTutor);
+        setGrupoSeleccionado(docenteActivo.grupoTutor);
+      } else if (esEspecial && grupoActivoDocente) {
+        setGradoSeleccionado(grupoActivoDocente.grado);
+        setGrupoSeleccionado(grupoActivoDocente.grupo);
+      }
+    }
+  }, [docenteActivo, grupoActivoDocente]);
 
   const estudiantesFiltrados = db.estudiantes.filter(
     (e) => e.grado === gradoSeleccionado && e.grupo === grupoSeleccionado
@@ -197,6 +240,22 @@ export const AsistenciaView: React.FC<AsistenciaViewProps> = ({
           </div>
         </div>
 
+        {/* Banner de rol docente */}
+        {docenteActivo && (
+          <div className="bg-amber-50 border border-amber-300 p-2.5 rounded-xl text-xs flex items-center justify-between gap-2">
+            <span className="text-amber-950 font-bold">
+              {esConsejero ? (
+                <>🎓 Maestro(a) Consejero(a): <strong>{docenteActivo.nombre}</strong> — Asistencia de su grupo de consejería.</>
+              ) : (
+                <>⭐ Docente Especial: <strong>{docenteActivo.nombre}</strong> — Asistencia de sus <strong>{gruposPermitidos.length} grupos asignados</strong>.</>
+              )}
+            </span>
+            <span className="text-[11px] font-mono text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 shrink-0">
+              {docenteActivo.correo}
+            </span>
+          </div>
+        )}
+
         {/* Filtros */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100 text-xs">
           <div>
@@ -210,33 +269,68 @@ export const AsistenciaView: React.FC<AsistenciaViewProps> = ({
           </div>
 
           <div>
-            <label className="block text-slate-500 font-semibold mb-1">Grado</label>
-            <select
-              value={gradoSeleccionado}
-              onChange={(e) => setGradoSeleccionado(e.target.value)}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 focus:bg-white"
-            >
-              {GRADOS.map((g) => (
-                <option key={g} value={g}>
-                  {g} Grado
-                </option>
-              ))}
-            </select>
+            <label className="block text-slate-500 font-semibold mb-1">
+              Grado {docenteActivo && esConsejero ? '(Fijo Consejería)' : ''}
+            </label>
+            {docenteActivo && esConsejero ? (
+              <div className="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg font-bold text-slate-800">
+                {gradoSeleccionado} Grado
+              </div>
+            ) : docenteActivo && esEspecial ? (
+              <select
+                value={`${gradoSeleccionado}-${grupoSeleccionado}`}
+                onChange={(e) => {
+                  const [g, grp] = e.target.value.split('-');
+                  setGradoSeleccionado(g);
+                  setGrupoSeleccionado(grp);
+                  if (onSelectGrupoActivoDocente) {
+                    onSelectGrupoActivoDocente({ grado: g, grupo: grp });
+                  }
+                }}
+                className="w-full p-2 bg-amber-50 border border-amber-300 rounded-lg outline-none font-bold text-slate-800 focus:bg-white"
+              >
+                {gruposPermitidos.map((ga) => (
+                  <option key={`${ga.grado}-${ga.grupo}`} value={`${ga.grado}-${ga.grupo}`}>
+                    {ga.grado} Grupo &ldquo;{ga.grupo}&rdquo;
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <select
+                value={gradoSeleccionado}
+                onChange={(e) => setGradoSeleccionado(e.target.value)}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 focus:bg-white"
+              >
+                {GRADOS.map((g) => (
+                  <option key={g} value={g}>
+                    {g} Grado
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div>
-            <label className="block text-slate-500 font-semibold mb-1">Grupo</label>
-            <select
-              value={grupoSeleccionado}
-              onChange={(e) => setGrupoSeleccionado(e.target.value)}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 focus:bg-white"
-            >
-              {GRUPOS.map((g) => (
-                <option key={g} value={g}>
-                  Grupo {g}
-                </option>
-              ))}
-            </select>
+            <label className="block text-slate-500 font-semibold mb-1">
+              Grupo {docenteActivo && (esConsejero || esEspecial) ? '(Fijo)' : ''}
+            </label>
+            {docenteActivo && (esConsejero || esEspecial) ? (
+              <div className="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg font-bold text-slate-800">
+                Grupo &ldquo;{grupoSeleccionado}&rdquo;
+              </div>
+            ) : (
+              <select
+                value={grupoSeleccionado}
+                onChange={(e) => setGrupoSeleccionado(e.target.value)}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 focus:bg-white"
+              >
+                {GRUPOS.map((g) => (
+                  <option key={g} value={g}>
+                    Grupo {g}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 

@@ -12,6 +12,7 @@ import {
   Sparkles,
   Settings,
   BookOpen,
+  GraduationCap,
 } from 'lucide-react';
 import { AppDatabase } from '../utils/storage';
 import { TODAS_MATERIAS, TIPOS_NOTA, NotaDiaria, CalificacionMateria } from '../types';
@@ -23,6 +24,7 @@ interface AccionesRapidasModalProps {
   onOpenNuevoEstudiante: () => void;
   onOpenNuevoComunicado: () => void;
   onOpenPortalPadres: () => void;
+  onOpenLoginDocente?: () => void;
   onOpenConfig: () => void;
   onNavigateToView: (view: any) => void;
   onShowToast: (msg: string) => void;
@@ -35,6 +37,7 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
   onOpenNuevoEstudiante,
   onOpenNuevoComunicado,
   onOpenPortalPadres,
+  onOpenLoginDocente,
   onOpenConfig,
   onNavigateToView,
   onShowToast,
@@ -215,23 +218,48 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
                   </div>
                 </button>
 
-                {/* 5. Ingreso a Portal de Padres */}
+                {/* 5. Ingreso a Aula Docente Oficial */}
+                {onOpenLoginDocente && (
+                  <button
+                    onClick={() => {
+                      onClose();
+                      onOpenLoginDocente();
+                    }}
+                    className="p-3.5 rounded-2xl border border-blue-300 bg-blue-50/70 hover:bg-blue-100 transition flex items-start gap-3 text-left group"
+                  >
+                    <div className="p-2 rounded-xl bg-[#003366] text-[#FFC107] shrink-0 group-hover:scale-105 transition-transform">
+                      <GraduationCap className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-xs group-hover:text-[#003366]">
+                        Ingreso Docente Oficial
+                      </h4>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        Acceso con correo @meduca.edu.pa a sus grupos asignados.
+                      </p>
+                    </div>
+                  </button>
+                )}
+
+                {/* 6. Ingreso a Portal de Padres */}
                 <button
                   onClick={() => {
                     onClose();
                     onOpenPortalPadres();
                   }}
-                  className="p-3.5 rounded-2xl border border-amber-300 bg-amber-50/50 hover:bg-amber-100/70 transition flex items-start gap-3 text-left group sm:col-span-2"
+                  className={`p-3.5 rounded-2xl border border-amber-300 bg-amber-50/50 hover:bg-amber-100/70 transition flex items-start gap-3 text-left group ${
+                    onOpenLoginDocente ? '' : 'sm:col-span-2'
+                  }`}
                 >
-                  <div className="p-2 rounded-xl bg-amber-200 text-slate-950 shrink-0">
-                    <HeartHandshake className="w-5 h-5" />
+                  <div className="p-2 rounded-xl bg-amber-200 text-slate-950 shrink-0 group-hover:scale-105 transition-transform">
+                    <HeartHandshake className="w-5 h-5 text-slate-950" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900 text-xs">
-                      Acceder al Portal Familiar para Padres
+                    <h4 className="font-bold text-slate-900 text-xs group-hover:text-amber-950">
+                      Portal Familiar para Padres
                     </h4>
                     <p className="text-[11px] text-slate-600 mt-0.5">
-                      Pruebe la vista privada con credenciales de acudiente y restricción a sus hijos.
+                      Acceso restringido a calificaciones y asistencia de sus hijos.
                     </p>
                   </div>
                 </button>

@@ -9,6 +9,12 @@ import {
   Phone,
   X,
   Check,
+  Mail,
+  KeyRound,
+  Layers,
+  LogIn,
+  CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 import {
   Docente,
@@ -16,6 +22,7 @@ import {
   MATERIAS_ESPECIALES,
   GRADOS,
   GRUPOS,
+  GrupoAsignado,
 } from '../types';
 import { AppDatabase } from '../utils/storage';
 
@@ -23,12 +30,16 @@ interface DocentesViewProps {
   db: AppDatabase;
   onUpdateDb: (db: AppDatabase) => void;
   onShowToast: (msg: string) => void;
+  docenteActivo?: Docente | null;
+  onLoginDocente?: (doc: Docente) => void;
 }
 
 export const DocentesView: React.FC<DocentesViewProps> = ({
   db,
   onUpdateDb,
   onShowToast,
+  docenteActivo = null,
+  onLoginDocente,
 }) => {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [docenteAEditar, setDocenteAEditar] = useState<Docente | null>(null);
@@ -36,20 +47,34 @@ export const DocentesView: React.FC<DocentesViewProps> = ({
   // Form states
   const [formNombre, setFormNombre] = useState('');
   const [formCedula, setFormCedula] = useState('');
+  const [formCorreo, setFormCorreo] = useState('');
+  const [formPin, setFormPin] = useState('1234');
   const [formTipo, setFormTipo] = useState<'consejero' | 'especial'>('consejero');
   const [formMaterias, setFormMaterias] = useState<string[]>([...MATERIAS_CONSEJERO]);
   const [formGradoTutor, setFormGradoTutor] = useState<string>('3°');
   const [formGrupoTutor, setFormGrupoTutor] = useState<string>('A');
+  const [formGruposAsignados, setFormGruposAsignados] = useState<GrupoAsignado[]>([
+    { grado: '1°', grupo: 'A' },
+    { grado: '3°', grupo: 'A' },
+    { grado: '4°', grupo: 'B' },
+  ]);
   const [formTelefono, setFormTelefono] = useState('');
 
   const abrirModalNuevo = () => {
     setDocenteAEditar(null);
     setFormNombre('');
     setFormCedula('');
+    setFormCorreo('');
+    setFormPin('1234');
     setFormTipo('consejero');
     setFormMaterias([...MATERIAS_CONSEJERO]);
     setFormGradoTutor('1°');
     setFormGrupoTutor('A');
+    setFormGruposAsignados([
+      { grado: '1°', grupo: 'A' },
+      { grado: '3°', grupo: 'A' },
+      { grado: '4°', grupo: 'B' },
+    ]);
     setFormTelefono('');
     setModalAbierto(true);
   };
@@ -58,10 +83,21 @@ export const DocentesView: React.FC<DocentesViewProps> = ({
     setDocenteAEditar(doc);
     setFormNombre(doc.nombre);
     setFormCedula(doc.cedula);
+    setFormCorreo(doc.correo || `${doc.nombre.toLowerCase().replace(/[^a-z0-9]/g, '.')}@meduca.edu.pa`);
+    setFormPin(doc.pin || '1234');
     setFormTipo(doc.tipo);
     setFormMaterias([...doc.materias]);
     setFormGradoTutor(doc.gradoTutor || '1°');
     setFormGrupoTutor(doc.grupoTutor || 'A');
+    setFormGruposAsignados(
+      doc.gruposAsignados && doc.gruposAsignados.length > 0
+        ? [...doc.gruposAsignados]
+        : [
+            { grado: '1°', grupo: 'A' },
+            { grado: '3°', grupo: 'A' },
+            { grado: '4°', grupo: 'B' },
+          ]
+    );
     setFormTelefono(doc.telefono || '');
     setModalAbierto(true);
   };
@@ -88,6 +124,19 @@ export const DocentesView: React.FC<DocentesViewProps> = ({
     }
   };
 
+  const toggleGrupoAsignado = (grado: string, grupo: string) => {
+    const existe = formGruposAsignados.some((g) => g.grado === grado && g.grupo === grupo);
+    if (existe) {
+      if (formGruposAsignados.length <= 1) {
+        onShowToast('⚠️ El docente especial debe tener al menos 1 grupo asignado');
+        return;
+      }
+      setFormGruposAsignados(formGruposAsignados.filter((g) => !(g.grado === grado && g.grupo === grupo)));
+    } else {
+      setFormGruposAsignados([...formGruposAsignados, { grado, grupo }]);
+    }
+  };
+
   const guardarDocente = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formNombre.trim()) {
@@ -100,16 +149,22 @@ export const DocentesView: React.FC<DocentesViewProps> = ({
     }
 
     if (docenteAEditar) {
+      const correoGenerado =
+        formCorreo.trim() ||
+        `${formNombre.trim().toLowerCase().replace(/[^a-z0-9]/g, '.')}@meduca.edu.pa`;
       const actualizados = db.docentes.map((d) =>
         d.id === docenteAEditar.id
           ? {
               ...d,
               nombre: formNombre.trim(),
               cedula: formCedula.trim(),
+              correo: correoGenerado,
+              pin: formPin.trim() || '1234',
               tipo: formTipo,
               materias: formMaterias,
               gradoTutor: formTipo === 'consejero' ? formGradoTutor : undefined,
               grupoTutor: formTipo === 'consejero' ? formGrupoTutor : undefined,
+              gruposAsignados: formTipo === 'especial' ? formGruposAsignados : undefined,
               telefono: formTelefono.trim(),
             }
           : d
@@ -117,14 +172,20 @@ export const DocentesView: React.FC<DocentesViewProps> = ({
       onUpdateDb({ ...db, docentes: actualizados });
       onShowToast('✅ Docente actualizado con éxito');
     } else {
+      const correoGenerado =
+        formCorreo.trim() ||
+        `${formNombre.trim().toLowerCase().replace(/[^a-z0-9]/g, '.')}@meduca.edu.pa`;
       const nuevo: Docente = {
         id: 'doc_' + Date.now(),
         nombre: formNombre.trim(),
         cedula: formCedula.trim(),
+        correo: correoGenerado,
+        pin: formPin.trim() || '1234',
         tipo: formTipo,
         materias: formMaterias,
         gradoTutor: formTipo === 'consejero' ? formGradoTutor : undefined,
         grupoTutor: formTipo === 'consejero' ? formGrupoTutor : undefined,
+        gruposAsignados: formTipo === 'especial' ? formGruposAsignados : undefined,
         telefono: formTelefono.trim(),
       };
       onUpdateDb({ ...db, docentes: [...db.docentes, nuevo] });
@@ -233,18 +294,52 @@ export const DocentesView: React.FC<DocentesViewProps> = ({
                   </span>
                 </div>
 
-                {/* Consejería asignada */}
-                {esConsejero && doc.gradoTutor && (
-                  <div className="mt-3 bg-slate-50 p-2 rounded-lg border border-slate-100 flex items-center justify-between text-xs">
-                    <span className="text-slate-500">Grado a su cargo:</span>
-                    <span className="font-bold text-slate-800">
-                      {doc.gradoTutor} &ldquo;{doc.grupoTutor}&rdquo;
-                    </span>
+                {/* Correo Institucional Registrado */}
+                <div className="mt-2.5 flex items-center gap-1.5 text-xs text-[#003366] bg-blue-50/80 px-2.5 py-1.5 rounded-lg border border-blue-200/70 font-medium">
+                  <Mail className="w-3.5 h-3.5 text-[#003366] shrink-0" />
+                  <span className="font-mono text-[11px] truncate">{doc.correo}</span>
+                </div>
+
+                {/* Consejería asignada o Múltiples Grupos */}
+                {esConsejero ? (
+                  doc.gradoTutor && (
+                    <div className="mt-2 bg-slate-50 p-2 rounded-lg border border-slate-100 flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Grado a su cargo (Tutor):</span>
+                      <span className="font-bold text-slate-800">
+                        {doc.gradoTutor} &ldquo;{doc.grupoTutor}&rdquo;
+                      </span>
+                    </div>
+                  )
+                ) : (
+                  <div className="mt-2 bg-amber-50/80 p-2 rounded-lg border border-amber-200 text-xs">
+                    <div className="flex items-center justify-between font-bold text-amber-900 mb-1.5">
+                      <span className="flex items-center gap-1">
+                        <Layers className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Grupos Asignados ({doc.gruposAsignados?.length || 0}):</span>
+                      </span>
+                      <span className="text-[10px] text-amber-800 bg-amber-100 font-extrabold px-1.5 py-0.5 rounded border border-amber-300">
+                        Multigrupo
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {doc.gruposAsignados && doc.gruposAsignados.length > 0 ? (
+                        doc.gruposAsignados.map((g) => (
+                          <span
+                            key={`${g.grado}-${g.grupo}`}
+                            className="bg-white border border-amber-300 text-amber-950 font-black text-[10px] px-2 py-0.5 rounded shadow-xs"
+                          >
+                            {g.grado} &ldquo;{g.grupo}&rdquo;
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-slate-400 italic text-[11px]">Sin grupos asignados</span>
+                      )}
+                    </div>
                   </div>
                 )}
 
                 {/* Materias */}
-                <div className="mt-3">
+                <div className="mt-2.5">
                   <span className="text-[11px] font-semibold text-slate-500 block mb-1">
                     Materias que imparte ({doc.materias.length}):
                   </span>
@@ -269,21 +364,41 @@ export const DocentesView: React.FC<DocentesViewProps> = ({
               </div>
 
               {/* Botones de acción */}
-              <div className="flex items-center justify-end gap-1 mt-4 pt-3 border-t border-slate-100">
-                <button
-                  onClick={() => abrirModalEditar(doc)}
-                  className="flex items-center gap-1 text-xs text-slate-600 hover:text-blue-700 px-2 py-1 rounded hover:bg-slate-100 transition"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                  <span>Editar</span>
-                </button>
-                <button
-                  onClick={() => eliminarDocente(doc.id, doc.nombre)}
-                  className="flex items-center gap-1 text-xs text-rose-600 hover:text-rose-800 px-2 py-1 rounded hover:bg-rose-50 transition"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Eliminar</span>
-                </button>
+              <div className="flex items-center justify-between gap-1 mt-4 pt-3 border-t border-slate-100">
+                {onLoginDocente && (
+                  docenteActivo?.id === doc.id ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-300">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Sesión Activa</span>
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => onLoginDocente(doc)}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#003366] hover:bg-[#002244] px-2.5 py-1 rounded-lg transition shadow-xs"
+                      title={`Ingresar al aula virtual como ${doc.nombre}`}
+                    >
+                      <LogIn className="w-3.5 h-3.5 text-[#FFC107]" />
+                      <span>Ingresar al Aula</span>
+                    </button>
+                  )
+                )}
+
+                <div className="flex items-center gap-1 ml-auto">
+                  <button
+                    onClick={() => abrirModalEditar(doc)}
+                    className="flex items-center gap-1 text-xs text-slate-600 hover:text-blue-700 px-2 py-1 rounded hover:bg-slate-100 transition"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    <span>Editar</span>
+                  </button>
+                  <button
+                    onClick={() => eliminarDocente(doc.id, doc.nombre)}
+                    className="flex items-center gap-1 text-xs text-rose-600 hover:text-rose-800 px-2 py-1 rounded hover:bg-rose-50 transition"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Eliminar</span>
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -346,6 +461,40 @@ export const DocentesView: React.FC<DocentesViewProps> = ({
                 </div>
               </div>
 
+              {/* Correo Institucional y PIN de Acceso */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-blue-50/50 p-3 rounded-xl border border-blue-200/60">
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-[#003366]" />
+                    <span>Correo Institucional MEDUCA *</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="ejemplo@meduca.edu.pa"
+                    value={formCorreo}
+                    onChange={(e) => setFormCorreo(e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none focus:border-[#003366] font-mono text-[11px]"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">Usado para el login oficial</p>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-[#003366]" />
+                    <span>PIN / Clave de Acceso</span>
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="PIN (por defecto 1234)"
+                    value={formPin}
+                    onChange={(e) => setFormPin(e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none focus:border-[#003366] font-mono"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">4 dígitos numéricos</p>
+                </div>
+              </div>
+
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
                   Tipo de Docente (MEDUCA)
@@ -360,7 +509,7 @@ export const DocentesView: React.FC<DocentesViewProps> = ({
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    <span>🎓 Consejero (6 Asignaturas)</span>
+                    <span>🎓 Consejero (1 Grupo)</span>
                   </button>
                   <button
                     type="button"
@@ -371,15 +520,15 @@ export const DocentesView: React.FC<DocentesViewProps> = ({
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    <span>⭐ Especialista</span>
+                    <span>⭐ Especial (Varios Grupos)</span>
                   </button>
                 </div>
               </div>
 
-              {formTipo === 'consejero' && (
+              {formTipo === 'consejero' ? (
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
                   <p className="font-bold text-slate-700 mb-2">
-                    Grado de Consejería Asignado
+                    Grado de Consejería Asignado (Grupo Único)
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
@@ -410,6 +559,45 @@ export const DocentesView: React.FC<DocentesViewProps> = ({
                         ))}
                       </select>
                     </div>
+                  </div>
+                </div>
+              ) : (
+                /* Selección de múltiples grupos para docentes especiales */
+                <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-amber-950 flex items-center gap-1.5">
+                      <Layers className="w-4 h-4 text-amber-600" />
+                      <span>Grupos Asignados ({formGruposAsignados.length} seleccionados):</span>
+                    </span>
+                    <span className="text-[10px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded font-bold">
+                      Multigrupo
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-amber-900/80 mb-2">
+                    Haga clic en los grupos que este docente especial atiende en el plantel:
+                  </p>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-36 overflow-y-auto p-1.5 bg-white/80 rounded-lg border border-amber-200">
+                    {GRADOS.flatMap((g) =>
+                      GRUPOS.slice(0, 2).map((grp) => {
+                        const activo = formGruposAsignados.some(
+                          (ga) => ga.grado === g && ga.grupo === grp
+                        );
+                        return (
+                          <button
+                            key={`${g}-${grp}`}
+                            type="button"
+                            onClick={() => toggleGrupoAsignado(g, grp)}
+                            className={`p-1.5 rounded text-center text-[11px] font-bold transition border ${
+                              activo
+                                ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-xs'
+                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            {g}&ldquo;{grp}&rdquo;
+                          </button>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               )}

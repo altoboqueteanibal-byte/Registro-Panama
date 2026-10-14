@@ -20,6 +20,8 @@ import {
   TIPOS_NOTA,
   CalificacionMateria,
   NotaDiaria,
+  Docente,
+  GrupoAsignado,
 } from '../types';
 import { AppDatabase } from '../utils/storage';
 import { calcularPromedioTrimestre } from '../utils/calculations';
@@ -28,19 +30,73 @@ interface NotasViewProps {
   db: AppDatabase;
   onUpdateDb: (db: AppDatabase) => void;
   onShowToast: (msg: string) => void;
+  docenteActivo?: Docente | null;
+  grupoActivoDocente?: GrupoAsignado;
+  onSelectGrupoActivoDocente?: (grupo: GrupoAsignado) => void;
 }
 
 export const NotasView: React.FC<NotasViewProps> = ({
   db,
   onUpdateDb,
   onShowToast,
+  docenteActivo = null,
+  grupoActivoDocente,
+  onSelectGrupoActivoDocente,
 }) => {
-  const [gradoSeleccionado, setGradoSeleccionado] = useState<string>('3°');
-  const [grupoSeleccionado, setGrupoSeleccionado] = useState<string>('A');
-  const [materiaSeleccionada, setMateriaSeleccionada] = useState<string>('Matemáticas');
+  // Grupos permitidos según el docente autenticado
+  const esConsejero = docenteActivo?.tipo === 'consejero';
+  const esEspecial = docenteActivo?.tipo === 'especial';
+
+  const gruposPermitidos: GrupoAsignado[] = docenteActivo
+    ? esConsejero
+      ? [{ grado: docenteActivo.gradoTutor || '3°', grupo: docenteActivo.grupoTutor || 'A' }]
+      : docenteActivo.gruposAsignados && docenteActivo.gruposAsignados.length > 0
+      ? docenteActivo.gruposAsignados
+      : [{ grado: '1°', grupo: 'A' }]
+    : [];
+
+  const materiasPermitidas: string[] = docenteActivo
+    ? docenteActivo.materias
+    : [...TODAS_MATERIAS];
+
+  const defaultGrado = docenteActivo
+    ? esConsejero
+      ? docenteActivo.gradoTutor || '3°'
+      : grupoActivoDocente?.grado || gruposPermitidos[0]?.grado || '1°'
+    : '3°';
+
+  const defaultGrupo = docenteActivo
+    ? esConsejero
+      ? docenteActivo.grupoTutor || 'A'
+      : grupoActivoDocente?.grupo || gruposPermitidos[0]?.grupo || 'A'
+    : 'A';
+
+  const defaultMateria = docenteActivo
+    ? materiasPermitidas[0] || 'Español'
+    : 'Matemáticas';
+
+  const [gradoSeleccionado, setGradoSeleccionado] = useState<string>(defaultGrado);
+  const [grupoSeleccionado, setGrupoSeleccionado] = useState<string>(defaultGrupo);
+  const [materiaSeleccionada, setMateriaSeleccionada] = useState<string>(defaultMateria);
   const [trimestreSeleccionado, setTrimestreSeleccionado] = useState<number>(
     db.trimestreActual
   );
+
+  // Sincronizar si cambia grupoActivoDocente externamente
+  React.useEffect(() => {
+    if (docenteActivo) {
+      if (esConsejero && docenteActivo.gradoTutor && docenteActivo.grupoTutor) {
+        setGradoSeleccionado(docenteActivo.gradoTutor);
+        setGrupoSeleccionado(docenteActivo.grupoTutor);
+      } else if (esEspecial && grupoActivoDocente) {
+        setGradoSeleccionado(grupoActivoDocente.grado);
+        setGrupoSeleccionado(grupoActivoDocente.grupo);
+      }
+      if (!materiasPermitidas.includes(materiaSeleccionada)) {
+        setMateriaSeleccionada(materiasPermitidas[0] || 'Inglés');
+      }
+    }
+  }, [docenteActivo, grupoActivoDocente]);
 
   // Modal / Drawer de notas diarias para un estudiante
   const [estudianteIdDetalle, setEstudianteIdDetalle] = useState<string | null>(null);
@@ -233,46 +289,103 @@ export const NotasView: React.FC<NotasViewProps> = ({
           </button>
         </div>
 
-        {/* 4 selectores principales */}
+        {/* Banner de rol docente */}
+        {docenteActivo && (
+          <div className="bg-amber-50 border border-amber-300 p-2.5 rounded-xl text-xs flex items-center justify-between gap-2">
+            <span className="text-amber-950 font-bold">
+              {esConsejero ? (
+                <>🎓 Maestro(a) Consejero(a): <strong>{docenteActivo.nombre}</strong> — Asignado a su grado de consejería.</>
+              ) : (
+                <>⭐ Docente Especial: <strong>{docenteActivo.nombre}</strong> — Acceso autorizado a <strong>{gruposPermitidos.length} grupos asignados</strong>.</>
+              )}
+            </span>
+            <span className="text-[11px] font-mono text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 shrink-0">
+              {docenteActivo.correo}
+            </span>
+          </div>
+        )}
+
+        {/* Selectores de filtrado */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-100 text-xs">
+          {/* Grado */}
           <div>
-            <label className="block text-slate-500 font-semibold mb-1">Grado</label>
-            <select
-              value={gradoSeleccionado}
-              onChange={(e) => {
-                setGradoSeleccionado(e.target.value);
-                setEstudianteIdDetalle(null);
-              }}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 focus:bg-white"
-            >
-              {GRADOS.map((g) => (
-                <option key={g} value={g}>
-                  {g} Grado
-                </option>
-              ))}
-            </select>
+            <label className="block text-slate-500 font-semibold mb-1">
+              Grado {docenteActivo && esConsejero ? '(Fijo Consejería)' : ''}
+            </label>
+            {docenteActivo && esConsejero ? (
+              <div className="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg font-bold text-slate-800">
+                {gradoSeleccionado} Grado
+              </div>
+            ) : docenteActivo && esEspecial ? (
+              <select
+                value={`${gradoSeleccionado}-${grupoSeleccionado}`}
+                onChange={(e) => {
+                  const [g, grp] = e.target.value.split('-');
+                  setGradoSeleccionado(g);
+                  setGrupoSeleccionado(grp);
+                  setEstudianteIdDetalle(null);
+                  if (onSelectGrupoActivoDocente) {
+                    onSelectGrupoActivoDocente({ grado: g, grupo: grp });
+                  }
+                }}
+                className="w-full p-2 bg-amber-50 border border-amber-300 rounded-lg outline-none font-bold text-slate-800 focus:bg-white"
+              >
+                {gruposPermitidos.map((ga) => (
+                  <option key={`${ga.grado}-${ga.grupo}`} value={`${ga.grado}-${ga.grupo}`}>
+                    {ga.grado} Grupo &ldquo;{ga.grupo}&rdquo;
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <select
+                value={gradoSeleccionado}
+                onChange={(e) => {
+                  setGradoSeleccionado(e.target.value);
+                  setEstudianteIdDetalle(null);
+                }}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 focus:bg-white"
+              >
+                {GRADOS.map((g) => (
+                  <option key={g} value={g}>
+                    {g} Grado
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
+          {/* Grupo */}
           <div>
-            <label className="block text-slate-500 font-semibold mb-1">Grupo</label>
-            <select
-              value={grupoSeleccionado}
-              onChange={(e) => {
-                setGrupoSeleccionado(e.target.value);
-                setEstudianteIdDetalle(null);
-              }}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 focus:bg-white"
-            >
-              {GRUPOS.map((g) => (
-                <option key={g} value={g}>
-                  Grupo {g}
-                </option>
-              ))}
-            </select>
+            <label className="block text-slate-500 font-semibold mb-1">
+              Grupo {docenteActivo && esConsejero ? '(Fijo)' : ''}
+            </label>
+            {docenteActivo && (esConsejero || esEspecial) ? (
+              <div className="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg font-bold text-slate-800">
+                Grupo &ldquo;{grupoSeleccionado}&rdquo;
+              </div>
+            ) : (
+              <select
+                value={grupoSeleccionado}
+                onChange={(e) => {
+                  setGrupoSeleccionado(e.target.value);
+                  setEstudianteIdDetalle(null);
+                }}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 focus:bg-white"
+              >
+                {GRUPOS.map((g) => (
+                  <option key={g} value={g}>
+                    Grupo {g}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
+          {/* Asignatura */}
           <div>
-            <label className="block text-slate-500 font-semibold mb-1">Asignatura</label>
+            <label className="block text-slate-500 font-semibold mb-1">
+              Asignatura {docenteActivo ? '(Asignada)' : ''}
+            </label>
             <select
               value={materiaSeleccionada}
               onChange={(e) => {
@@ -281,7 +394,7 @@ export const NotasView: React.FC<NotasViewProps> = ({
               }}
               className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-[#003366] focus:bg-white truncate"
             >
-              {TODAS_MATERIAS.map((m) => (
+              {materiasPermitidas.map((m) => (
                 <option key={m} value={m}>
                   {m}
                 </option>

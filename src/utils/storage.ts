@@ -286,6 +286,8 @@ export const DOCENTES_INICIALES: Docente[] = [
     id: 'doc_201',
     nombre: 'Profa. Carmen Samudio de Morales',
     cedula: '4-189-423',
+    correo: 'carmen.samudio@meduca.edu.pa',
+    pin: '1234',
     tipo: 'consejero',
     materias: [...MATERIAS_CONSEJERO],
     gradoTutor: '3°',
@@ -296,6 +298,8 @@ export const DOCENTES_INICIALES: Docente[] = [
     id: 'doc_202',
     nombre: 'Prof. Aníbal Castillo Miranda',
     cedula: '4-150-891',
+    correo: 'anibal.castillo@meduca.edu.pa',
+    pin: '1234',
     tipo: 'consejero',
     materias: [...MATERIAS_CONSEJERO],
     gradoTutor: '4°',
@@ -306,24 +310,47 @@ export const DOCENTES_INICIALES: Docente[] = [
     id: 'doc_203',
     nombre: 'Teacher Kevin Montezuma',
     cedula: '4-722-1044',
+    correo: 'kevin.montezuma@meduca.edu.pa',
+    pin: '1234',
     tipo: 'especial',
     materias: ['Inglés'],
+    gruposAsignados: [
+      { grado: '1°', grupo: 'A' },
+      { grado: '3°', grupo: 'A' },
+      { grado: '4°', grupo: 'B' },
+      { grado: '6°', grupo: 'A' },
+    ],
     telefono: '6811-9922',
   },
   {
     id: 'doc_204',
     nombre: 'Prof. Javier Atencio Cárdenas',
     cedula: '4-233-891',
+    correo: 'javier.atencio@meduca.edu.pa',
+    pin: '1234',
     tipo: 'especial',
     materias: ['Educación Física', 'Agropecuaria'],
+    gruposAsignados: [
+      { grado: '1°', grupo: 'A' },
+      { grado: '3°', grupo: 'A' },
+      { grado: '4°', grupo: 'B' },
+      { grado: '6°', grupo: 'A' },
+    ],
     telefono: '6599-3388',
   },
   {
     id: 'doc_205',
     nombre: 'Profa. Mayra Montenegro',
     cedula: '4-210-544',
+    correo: 'mayra.montenegro@meduca.edu.pa',
+    pin: '1234',
     tipo: 'especial',
     materias: ['Educación para el Hogar', 'Tecnología e Informática'],
+    gruposAsignados: [
+      { grado: '3°', grupo: 'A' },
+      { grado: '4°', grupo: 'B' },
+      { grado: '6°', grupo: 'A' },
+    ],
     telefono: '6733-4411',
   },
 ];
@@ -462,8 +489,19 @@ export function cargarBaseDeDatos(): AppDatabase {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.estudiantes && parsed.docentes) {
+        const docentesHidratados = (parsed.docentes || []).map((doc: any) => {
+          const docInit = DOCENTES_INICIALES.find((d) => d.id === doc.id);
+          return {
+            ...doc,
+            correo: doc.correo || docInit?.correo || `${doc.nombre.toLowerCase().replace(/[^a-z0-9]/g, '.')}@meduca.edu.pa`,
+            pin: doc.pin || '1234',
+            gruposAsignados: doc.gruposAsignados || docInit?.gruposAsignados || (doc.tipo === 'especial' ? [{ grado: '1°', grupo: 'A' }, { grado: '3°', grupo: 'A' }, { grado: '4°', grupo: 'B' }, { grado: '6°', grupo: 'A' }] : undefined),
+          };
+        });
+
         return {
           ...parsed,
+          docentes: docentesHidratados.length > 0 ? docentesHidratados : DOCENTES_INICIALES,
           acudientes: parsed.acudientes && parsed.acudientes.length > 0 ? parsed.acudientes : ACUDIENTES_INICIALES,
           comunicados: parsed.comunicados && parsed.comunicados.length > 0 ? parsed.comunicados : COMUNICADOS_INICIALES,
           justificaciones: parsed.justificaciones ? parsed.justificaciones : JUSTIFICACIONES_INICIALES,

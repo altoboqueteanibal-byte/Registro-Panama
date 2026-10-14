@@ -17,11 +17,13 @@ import { BoletinesView } from './components/BoletinesView';
 import { ComunicadosAdminView } from './components/ComunicadosAdminView';
 import { PortalPadresView } from './components/portal-padres/PortalPadresView';
 import { LoginPadresModal } from './components/portal-padres/LoginPadresModal';
+import { LoginDocenteModal } from './components/portal-docentes/LoginDocenteModal';
+import { DocenteSessionBanner } from './components/portal-docentes/DocenteSessionBanner';
 import { AccionesRapidasModal } from './components/AccionesRapidasModal';
 import { BoletinModal } from './components/BoletinModal';
 import { CarnetModal } from './components/CarnetModal';
 import { ConfiguracionModal } from './components/ConfiguracionModal';
-import { AcudienteUsuario } from './types';
+import { AcudienteUsuario, Docente, GrupoAsignado } from './types';
 
 export default function App() {
   const [db, setDb] = useState<AppDatabase>(() => cargarBaseDeDatos());
@@ -42,6 +44,14 @@ export default function App() {
   const [acudienteActivo, setAcudienteActivo] = useState<AcudienteUsuario | null>(null);
   const [loginPadresAbierto, setLoginPadresAbierto] = useState<boolean>(false);
 
+  // Estado de Sesión Oficial de Docentes (@meduca.edu.pa)
+  const [docenteActivo, setDocenteActivo] = useState<Docente | null>(null);
+  const [grupoActivoDocente, setGrupoActivoDocente] = useState<GrupoAsignado>({
+    grado: '3°',
+    grupo: 'A',
+  });
+  const [loginDocenteAbierto, setLoginDocenteAbierto] = useState<boolean>(false);
+
   // Modales
   const [accionesRapidasAbierto, setAccionesRapidasAbierto] = useState<boolean>(false);
   const [boletinEstudianteId, setBoletinEstudianteId] = useState<string | null>(null);
@@ -56,6 +66,25 @@ export default function App() {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
+  };
+
+  const handleLoginDocente = (docente: Docente) => {
+    setDocenteActivo(docente);
+    const grupoInicial: GrupoAsignado =
+      docente.tipo === 'consejero'
+        ? { grado: docente.gradoTutor || '3°', grupo: docente.grupoTutor || 'A' }
+        : docente.gruposAsignados?.[0] || { grado: '1°', grupo: 'A' };
+    setGrupoActivoDocente(grupoInicial);
+    setLoginDocenteAbierto(false);
+    showToast(`👋 ¡Bienvenido(a), ${docente.nombre}! Aula virtual activa`);
+    if (currentView === 'dashboard' || currentView === 'docentes') {
+      setCurrentView('notas');
+    }
+  };
+
+  const handleLogoutDocente = () => {
+    setDocenteActivo(null);
+    showToast('👋 Sesión docente cerrada. Modo administración general activo');
   };
 
   const handleToggleCollapse = () => {
@@ -98,6 +127,8 @@ export default function App() {
           }
         }}
         onOpenPortalPadres={() => setLoginPadresAbierto(true)}
+        onOpenLoginDocente={() => setLoginDocenteAbierto(true)}
+        docenteActivo={docenteActivo}
         onOpenAccionesRapidas={() => setAccionesRapidasAbierto(true)}
         onToggleSidebar={!acudienteActivo ? handleToggleSidebarHeader : undefined}
         esModoPadre={!!acudienteActivo}
@@ -118,6 +149,9 @@ export default function App() {
             isOpenMobile={isSidebarOpenMobile}
             onCloseMobile={() => setIsSidebarOpenMobile(false)}
             onOpenPortalPadres={() => setLoginPadresAbierto(true)}
+            onOpenLoginDocente={() => setLoginDocenteAbierto(true)}
+            onLogoutDocente={handleLogoutDocente}
+            docenteActivo={docenteActivo}
             onOpenAccionesRapidas={() => setAccionesRapidasAbierto(true)}
             onOpenConfig={() => setConfiguracionAbierta(true)}
             db={db}
@@ -135,6 +169,16 @@ export default function App() {
           }`}
         >
           <main className="max-w-7xl w-full mx-auto p-3 sm:p-6 no-print">
+            {/* Banner de Sesión Docente si hay educador autenticado */}
+            {!acudienteActivo && docenteActivo && (
+              <DocenteSessionBanner
+                docente={docenteActivo}
+                grupoActivo={grupoActivoDocente}
+                onSelectGrupoActivo={setGrupoActivoDocente}
+                onLogoutDocente={handleLogoutDocente}
+              />
+            )}
+
             {/* VISTA PORTAL DE PADRES (Si hay acudiente autenticado) */}
             {acudienteActivo ? (
               <PortalPadresView
@@ -179,6 +223,8 @@ export default function App() {
                     db={db}
                     onUpdateDb={updateDb}
                     onShowToast={showToast}
+                    docenteActivo={docenteActivo}
+                    onLoginDocente={handleLoginDocente}
                   />
                 )}
 
@@ -187,6 +233,9 @@ export default function App() {
                     db={db}
                     onUpdateDb={updateDb}
                     onShowToast={showToast}
+                    docenteActivo={docenteActivo}
+                    grupoActivoDocente={grupoActivoDocente}
+                    onSelectGrupoActivoDocente={setGrupoActivoDocente}
                   />
                 )}
 
@@ -195,6 +244,9 @@ export default function App() {
                     db={db}
                     onUpdateDb={updateDb}
                     onShowToast={showToast}
+                    docenteActivo={docenteActivo}
+                    grupoActivoDocente={grupoActivoDocente}
+                    onSelectGrupoActivoDocente={setGrupoActivoDocente}
                   />
                 )}
 
@@ -235,6 +287,7 @@ export default function App() {
             showToast('Abriendo gestión de comunicados');
           }}
           onOpenPortalPadres={() => setLoginPadresAbierto(true)}
+          onOpenLoginDocente={() => setLoginDocenteAbierto(true)}
           onOpenConfig={() => setConfiguracionAbierta(true)}
           onNavigateToView={(v) => setCurrentView(v)}
           onShowToast={showToast}
@@ -250,6 +303,16 @@ export default function App() {
             setLoginPadresAbierto(false);
           }}
           onClose={() => setLoginPadresAbierto(false)}
+          onShowToast={showToast}
+        />
+      )}
+
+      {/* Modal de Inicio de Sesión para Docentes Oficiales */}
+      {loginDocenteAbierto && (
+        <LoginDocenteModal
+          db={db}
+          onSuccessLogin={handleLoginDocente}
+          onClose={() => setLoginDocenteAbierto(false)}
           onShowToast={showToast}
         />
       )}
