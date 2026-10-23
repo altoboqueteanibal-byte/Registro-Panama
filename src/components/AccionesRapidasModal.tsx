@@ -15,7 +15,13 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { AppDatabase } from '../utils/storage';
-import { TODAS_MATERIAS, TIPOS_NOTA, NotaDiaria, CalificacionMateria } from '../types';
+import {
+  TODAS_MATERIAS,
+  TIPOS_NOTA,
+  NotaDiaria,
+  CalificacionMateria,
+  Docente,
+} from '../types';
 
 interface AccionesRapidasModalProps {
   db: AppDatabase;
@@ -28,6 +34,7 @@ interface AccionesRapidasModalProps {
   onOpenConfig: () => void;
   onNavigateToView: (view: any) => void;
   onShowToast: (msg: string) => void;
+  docenteActivo?: Docente | null;
 }
 
 export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
@@ -41,11 +48,38 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
   onOpenConfig,
   onNavigateToView,
   onShowToast,
+  docenteActivo = null,
 }) => {
+  // Filtrar estudiantes y materias según el docente activo
+  const esConsejero = docenteActivo?.tipo === 'consejero';
+  const estudiantesPermitidos = docenteActivo
+    ? esConsejero
+      ? db.estudiantes.filter(
+          (e) =>
+            e.grado === docenteActivo.gradoTutor &&
+            e.grupo === docenteActivo.grupoTutor
+        )
+      : db.estudiantes.filter((e) =>
+          docenteActivo.gruposAsignados?.some(
+            (g) => g.grado === e.grado && g.grupo === e.grupo
+          )
+        )
+    : db.estudiantes;
+
+  const materiasPermitidas: string[] = docenteActivo
+    ? esConsejero
+      ? [...docenteActivo.materias, 'Tecnología']
+      : docenteActivo.materias
+    : [...TODAS_MATERIAS];
+
   // Mini form para registrar nota diaria exprés directamente desde el modal
   const [mostrarFormNota, setMostrarFormNota] = useState(false);
-  const [estudianteId, setEstudianteId] = useState(db.estudiantes[0]?.id || '');
-  const [materia, setMateria] = useState<string>('Matemáticas');
+  const [estudianteId, setEstudianteId] = useState(
+    estudiantesPermitidos[0]?.id || db.estudiantes[0]?.id || ''
+  );
+  const [materia, setMateria] = useState<string>(
+    materiasPermitidas[0] || 'Matemáticas'
+  );
   const [valor, setValor] = useState('4.8');
   const [tipo, setTipo] = useState<string>(TIPOS_NOTA[0]);
   const [observacion, setObservacion] = useState('');
@@ -139,16 +173,31 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* 1. Registrar Nota Exprés */}
                 <button
-                  onClick={() => setMostrarFormNota(true)}
+                  onClick={() => {
+                    if (!docenteActivo) {
+                      onClose();
+                      if (onOpenLoginDocente) onOpenLoginDocente();
+                      onShowToast('🔒 Inicie sesión como docente encargado de la materia para calificar');
+                      return;
+                    }
+                    setMostrarFormNota(true);
+                  }}
                   className="p-3.5 rounded-2xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/70 transition flex items-start gap-3 text-left group"
                 >
                   <div className="p-2 rounded-xl bg-purple-100 text-purple-700 shrink-0 group-hover:scale-105 transition-transform">
                     <ClipboardCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-800 text-xs group-hover:text-[#003366]">
-                      Calificar Nota Diaria Exprés
-                    </h4>
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="font-bold text-slate-800 text-xs group-hover:text-[#003366]">
+                        Calificar Nota Diaria Exprés
+                      </h4>
+                      {!docenteActivo && (
+                        <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded">
+                          Docente
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[11px] text-slate-500 mt-0.5">
                       Ingreso directo de tarea o prueba en 1 paso.
                     </p>
@@ -180,6 +229,9 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
                 <button
                   onClick={() => {
                     onClose();
+                    if (!docenteActivo) {
+                      onShowToast('🔒 Inicie sesión como docente encargado del grupo para registrar asistencia');
+                    }
                     onNavigateToView('asistencia');
                   }}
                   className="p-3.5 rounded-2xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/70 transition flex items-start gap-3 text-left group"
@@ -188,9 +240,16 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
                     <CalendarCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-800 text-xs group-hover:text-emerald-800">
-                      Pase de Lista del Día
-                    </h4>
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="font-bold text-slate-800 text-xs group-hover:text-emerald-800">
+                        Pase de Lista del Día
+                      </h4>
+                      {!docenteActivo && (
+                        <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded">
+                          Docente
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[11px] text-slate-500 mt-0.5">
                       Marcación rápida P/A/T/J y PASE-U.
                     </p>
@@ -308,7 +367,7 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
                   onChange={(e) => setEstudianteId(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-800 focus:bg-white"
                 >
-                  {db.estudiantes.map((est) => (
+                  {estudiantesPermitidos.map((est) => (
                     <option key={est.id} value={est.id}>
                       {est.nombre} — {est.grado} &ldquo;{est.grupo}&rdquo; ({est.cedula})
                     </option>
@@ -319,14 +378,14 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">
-                    Materia
+                    Materia {docenteActivo ? '(Asignada)' : ''}
                   </label>
                   <select
                     value={materia}
                     onChange={(e) => setMateria(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-[#003366] focus:bg-white"
                   >
-                    {TODAS_MATERIAS.map((m) => (
+                    {materiasPermitidas.map((m) => (
                       <option key={m} value={m}>
                         {m}
                       </option>

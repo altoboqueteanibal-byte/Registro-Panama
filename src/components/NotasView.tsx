@@ -35,6 +35,7 @@ import {
   calcularPromedioTrimestre,
   obtenerDesgloseTecnologia,
 } from '../utils/calculations';
+import { AccesoDocenteRequerido } from './AccesoDocenteRequerido';
 
 interface NotasViewProps {
   db: AppDatabase;
@@ -43,6 +44,8 @@ interface NotasViewProps {
   docenteActivo?: Docente | null;
   grupoActivoDocente?: GrupoAsignado;
   onSelectGrupoActivoDocente?: (grupo: GrupoAsignado) => void;
+  onOpenLoginDocente?: () => void;
+  onNavigate?: (view: any) => void;
 }
 
 export const NotasView: React.FC<NotasViewProps> = ({
@@ -52,38 +55,56 @@ export const NotasView: React.FC<NotasViewProps> = ({
   docenteActivo = null,
   grupoActivoDocente,
   onSelectGrupoActivoDocente,
+  onOpenLoginDocente,
+  onNavigate,
 }) => {
+  if (!docenteActivo) {
+    return (
+      <AccesoDocenteRequerido
+        modulo="notas"
+        onOpenLoginDocente={onOpenLoginDocente || (() => {})}
+        onNavigate={onNavigate || (() => {})}
+        db={db}
+      />
+    );
+  }
+
   // Grupos permitidos según el docente autenticado
-  const esConsejero = docenteActivo?.tipo === 'consejero';
-  const esEspecial = docenteActivo?.tipo === 'especial';
+  const esConsejero = docenteActivo.tipo === 'consejero';
+  const esEspecial = docenteActivo.tipo === 'especial';
 
-  const gruposPermitidos: GrupoAsignado[] = docenteActivo
-    ? esConsejero
-      ? [{ grado: docenteActivo.gradoTutor || '3°', grupo: docenteActivo.grupoTutor || 'A' }]
-      : docenteActivo.gruposAsignados && docenteActivo.gruposAsignados.length > 0
-      ? docenteActivo.gruposAsignados
-      : [{ grado: '1°', grupo: 'A' }]
-    : [];
+  const gruposPermitidos: GrupoAsignado[] = esConsejero
+    ? [{ grado: docenteActivo.gradoTutor || '3°', grupo: docenteActivo.grupoTutor || 'A' }]
+    : docenteActivo.gruposAsignados && docenteActivo.gruposAsignados.length > 0
+    ? docenteActivo.gruposAsignados
+    : [{ grado: '1°', grupo: 'A' }];
 
-  const materiasPermitidas: string[] = docenteActivo
+  const esDocenteEspecialTecnologia = docenteActivo.materias.some(
+    (m) =>
+      m === 'Educación para el Hogar' ||
+      m === 'Agropecuaria' ||
+      m === 'Informática' ||
+      m === 'Tecnología'
+  );
+
+  // Consejero: materias nucleares + Tecnología unificada.
+  // Especial Tecnología: sus sub-materias + Tecnología unificada.
+  // Especial otras asignaturas (ej. Inglés Kevin Montezuma): estrictamente solo sus materias asignadas.
+  const materiasPermitidas: string[] = esConsejero
+    ? [...docenteActivo.materias, 'Tecnología']
+    : esDocenteEspecialTecnologia
     ? Array.from(new Set([...docenteActivo.materias, 'Tecnología']))
-    : [...TODAS_MATERIAS];
+    : docenteActivo.materias;
 
-  const defaultGrado = docenteActivo
-    ? esConsejero
-      ? docenteActivo.gradoTutor || '3°'
-      : grupoActivoDocente?.grado || gruposPermitidos[0]?.grado || '1°'
-    : '3°';
+  const defaultGrado = esConsejero
+    ? docenteActivo.gradoTutor || '3°'
+    : grupoActivoDocente?.grado || gruposPermitidos[0]?.grado || '1°';
 
-  const defaultGrupo = docenteActivo
-    ? esConsejero
-      ? docenteActivo.grupoTutor || 'A'
-      : grupoActivoDocente?.grupo || gruposPermitidos[0]?.grupo || 'A'
-    : 'A';
+  const defaultGrupo = esConsejero
+    ? docenteActivo.grupoTutor || 'A'
+    : grupoActivoDocente?.grupo || gruposPermitidos[0]?.grupo || 'A';
 
-  const defaultMateria = docenteActivo
-    ? materiasPermitidas[0] || 'Español'
-    : 'Matemáticas';
+  const defaultMateria = materiasPermitidas[0] || 'Español';
 
   const [gradoSeleccionado, setGradoSeleccionado] = useState<string>(defaultGrado);
   const [grupoSeleccionado, setGrupoSeleccionado] = useState<string>(defaultGrupo);
@@ -91,6 +112,12 @@ export const NotasView: React.FC<NotasViewProps> = ({
   const [trimestreSeleccionado, setTrimestreSeleccionado] = useState<number>(
     db.trimestreActual
   );
+
+  // Verificar autorización de la selección actual
+  const esGrupoAutorizado = gruposPermitidos.some(
+    (g) => g.grado === gradoSeleccionado && g.grupo === grupoSeleccionado
+  );
+  const esMateriaAutorizada = materiasPermitidas.includes(materiaSeleccionada);
 
   // Sincronizar si cambia grupoActivoDocente externamente
   React.useEffect(() => {
@@ -119,10 +146,13 @@ export const NotasView: React.FC<NotasViewProps> = ({
   const [nuevaNotaTipo, setNuevaNotaTipo] = useState<string>(TIPOS_NOTA[0]);
   const [nuevaNotaObservacion, setNuevaNotaObservacion] = useState<string>('');
 
-  // Estudiantes filtrados
-  const estudiantesFiltrados = db.estudiantes.filter(
-    (e) => e.grado === gradoSeleccionado && e.grupo === grupoSeleccionado
-  );
+  // Estudiantes filtrados (restringidos a grupos y materias autorizados)
+  const estudiantesFiltrados =
+    esGrupoAutorizado && esMateriaAutorizada
+      ? db.estudiantes.filter(
+          (e) => e.grado === gradoSeleccionado && e.grupo === grupoSeleccionado
+        )
+      : [];
 
   // Estudiante en detalle
   const estudianteEnDetalle = db.estudiantes.find((e) => e.id === estudianteIdDetalle);
@@ -151,7 +181,10 @@ export const NotasView: React.FC<NotasViewProps> = ({
   // Agregar nueva nota diaria
   const handleAgregarNota = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!estudianteIdDetalle) return;
+    if (!estudianteIdDetalle || !esGrupoAutorizado || !esMateriaAutorizada) {
+      onShowToast('🚫 Acción bloqueada: No autorizado para asentar notas en este grupo o materia');
+      return;
+    }
 
     const valorNum = parseFloat(nuevaNotaValor);
     if (isNaN(valorNum) || valorNum < 1.0 || valorNum > 5.0) {
@@ -481,9 +514,37 @@ export const NotasView: React.FC<NotasViewProps> = ({
         </div>
       </div>
 
-      {/* Banner especial para Sub-áreas de Tecnología o para la Unificación Oficial */}
-      {materiaSeleccionada === 'Tecnología' || materiaSeleccionada === MATERIA_TECNOLOGIA_UNIFICADA ? (
-        <div className="bg-gradient-to-r from-amber-500/15 via-blue-500/10 to-emerald-500/15 border-2 border-amber-300 rounded-2xl p-4.5 space-y-3">
+      {!esGrupoAutorizado || !esMateriaAutorizada ? (
+        <div className="bg-amber-50 border-2 border-amber-300 p-8 rounded-2xl text-center space-y-3 shadow-xs">
+          <AlertCircle className="w-12 h-12 text-amber-600 mx-auto" />
+          <h3 className="font-extrabold text-slate-900 text-base">
+            Asignatura o Grupo No Asignado a su Carga Docente
+          </h3>
+          <p className="text-xs text-slate-600 max-w-lg mx-auto">
+            Educador(a) <strong>{docenteActivo.nombre}</strong>: No posee asignación oficial para calificar la asignatura <strong>&ldquo;{materiaSeleccionada}&rdquo;</strong> en el grupo <strong>{gradoSeleccionado} &ldquo;{grupoSeleccionado}&rdquo;</strong>.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 pt-2">
+            <button
+              onClick={() => {
+                if (gruposPermitidos.length > 0) {
+                  setGradoSeleccionado(gruposPermitidos[0].grado);
+                  setGrupoSeleccionado(gruposPermitidos[0].grupo);
+                }
+                if (materiasPermitidas.length > 0) {
+                  setMateriaSeleccionada(materiasPermitidas[0]);
+                }
+              }}
+              className="px-4 py-2 bg-[#003366] text-white text-xs font-bold rounded-xl hover:bg-[#002244] transition shadow-xs"
+            >
+              Abrir mi Asignatura y Grupo Asignado ({materiasPermitidas[0]})
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Banner especial para Sub-áreas de Tecnología o para la Unificación Oficial */}
+          {materiaSeleccionada === 'Tecnología' || materiaSeleccionada === MATERIA_TECNOLOGIA_UNIFICADA ? (
+            <div className="bg-gradient-to-r from-amber-500/15 via-blue-500/10 to-emerald-500/15 border-2 border-amber-300 rounded-2xl p-4.5 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-amber-400 text-slate-950 font-black shadow-xs">
@@ -1131,6 +1192,8 @@ export const NotasView: React.FC<NotasViewProps> = ({
             )}
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

@@ -21,6 +21,7 @@ import {
 } from '../types';
 import { AppDatabase } from '../utils/storage';
 import { calcularAsistenciaEstudiante } from '../utils/calculations';
+import { AccesoDocenteRequerido } from './AccesoDocenteRequerido';
 
 interface AsistenciaViewProps {
   db: AppDatabase;
@@ -29,6 +30,8 @@ interface AsistenciaViewProps {
   docenteActivo?: Docente | null;
   grupoActivoDocente?: GrupoAsignado;
   onSelectGrupoActivoDocente?: (grupo: GrupoAsignado) => void;
+  onOpenLoginDocente?: () => void;
+  onNavigate?: (view: any) => void;
 }
 
 export const AsistenciaView: React.FC<AsistenciaViewProps> = ({
@@ -38,9 +41,22 @@ export const AsistenciaView: React.FC<AsistenciaViewProps> = ({
   docenteActivo = null,
   grupoActivoDocente,
   onSelectGrupoActivoDocente,
+  onOpenLoginDocente,
+  onNavigate,
 }) => {
-  const esConsejero = docenteActivo?.tipo === 'consejero';
-  const esEspecial = docenteActivo?.tipo === 'especial';
+  if (!docenteActivo) {
+    return (
+      <AccesoDocenteRequerido
+        modulo="asistencia"
+        onOpenLoginDocente={onOpenLoginDocente || (() => {})}
+        onNavigate={onNavigate || (() => {})}
+        db={db}
+      />
+    );
+  }
+
+  const esConsejero = docenteActivo.tipo === 'consejero';
+  const esEspecial = docenteActivo.tipo === 'especial';
 
   const gruposPermitidos: GrupoAsignado[] = docenteActivo
     ? esConsejero
@@ -69,6 +85,10 @@ export const AsistenciaView: React.FC<AsistenciaViewProps> = ({
   );
   const [pestana, setPestana] = useState<'pase' | 'paseu'>('pase');
 
+  const esGrupoAutorizado = gruposPermitidos.some(
+    (g) => g.grado === gradoSeleccionado && g.grupo === grupoSeleccionado
+  );
+
   React.useEffect(() => {
     if (docenteActivo) {
       if (esConsejero && docenteActivo.gradoTutor && docenteActivo.grupoTutor) {
@@ -81,9 +101,11 @@ export const AsistenciaView: React.FC<AsistenciaViewProps> = ({
     }
   }, [docenteActivo, grupoActivoDocente]);
 
-  const estudiantesFiltrados = db.estudiantes.filter(
-    (e) => e.grado === gradoSeleccionado && e.grupo === grupoSeleccionado
-  );
+  const estudiantesFiltrados = esGrupoAutorizado
+    ? db.estudiantes.filter(
+        (e) => e.grado === gradoSeleccionado && e.grupo === grupoSeleccionado
+      )
+    : [];
 
   // Registros de la fecha seleccionada
   const asistenciasFecha = db.asistencia.filter(
@@ -361,7 +383,33 @@ export const AsistenciaView: React.FC<AsistenciaViewProps> = ({
         </div>
       </div>
 
-      {pestana === 'pase' ? (
+      {!esGrupoAutorizado ? (
+        <div className="bg-amber-50 border-2 border-amber-300 p-8 rounded-2xl text-center space-y-3 shadow-xs">
+          <AlertTriangle className="w-12 h-12 text-amber-600 mx-auto" />
+          <h3 className="font-extrabold text-slate-900 text-base">
+            Grupo No Asignado a su Carga Horaria Oficial
+          </h3>
+          <p className="text-xs text-slate-600 max-w-md mx-auto">
+            Educador(a) <strong>{docenteActivo.nombre}</strong>: El grupo{' '}
+            <strong>
+              {gradoSeleccionado} &ldquo;{grupoSeleccionado}&rdquo;
+            </strong>{' '}
+            no forma parte de sus grupos autorizados por MEDUCA.
+          </p>
+          <button
+            onClick={() => {
+              if (gruposPermitidos.length > 0) {
+                setGradoSeleccionado(gruposPermitidos[0].grado);
+                setGrupoSeleccionado(gruposPermitidos[0].grupo);
+              }
+            }}
+            className="mt-2 px-4 py-2 bg-[#003366] text-white text-xs font-bold rounded-xl hover:bg-[#002244] transition shadow-xs"
+          >
+            Abrir mi grupo asignado ({gruposPermitidos[0]?.grado} &ldquo;
+            {gruposPermitidos[0]?.grupo}&rdquo;)
+          </button>
+        </div>
+      ) : pestana === 'pase' ? (
         <>
           {/* Métricas del Día */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">

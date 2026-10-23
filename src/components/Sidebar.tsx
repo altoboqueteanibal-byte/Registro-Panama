@@ -19,10 +19,25 @@ import {
   LogOut,
   Layers,
   CheckCircle2,
+  Lock,
 } from 'lucide-react';
 import { ViewType } from './Navbar';
 import { AppDatabase, obtenerDocenteOfflineRegistrado } from '../utils/storage';
 import { Docente } from '../types';
+
+interface NavItem {
+  id: ViewType;
+  label: string;
+  shortLabel: string;
+  icon: any;
+  badge?: string;
+  badgeColor?: string;
+}
+
+interface GrupoNav {
+  categoria: string;
+  items: NavItem[];
+}
 
 interface SidebarProps {
   currentView: ViewType;
@@ -60,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const totalComunicados = db.comunicados.length;
   const docenteOffline = obtenerDocenteOfflineRegistrado();
 
-  const gruposNavegacion = [
+  const gruposNavegacion: GrupoNav[] = [
     {
       categoria: 'Gestión Principal',
       items: [
@@ -95,15 +110,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           label: 'Notas Diarias',
           shortLabel: 'Notas',
           icon: ClipboardList,
-          badge: `T${db.trimestreActual}`,
+          badge: docenteActivo ? `T${db.trimestreActual}` : '🔒 Protegido',
+          badgeColor: docenteActivo
+            ? undefined
+            : 'text-amber-300 bg-amber-950/80 border-amber-500/40',
         },
         {
           id: 'asistencia' as ViewType,
           label: 'Asistencia & PASE-U',
           shortLabel: 'Asistencia',
           icon: CalendarCheck,
-          badge: '90%',
-          badgeColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-500/30',
+          badge: docenteActivo ? '90%' : '🔒 Protegido',
+          badgeColor: docenteActivo
+            ? 'text-emerald-400 bg-emerald-950/60 border-emerald-500/30'
+            : 'text-amber-300 bg-amber-950/80 border-amber-500/40',
         },
         {
           id: 'boletines' as ViewType,

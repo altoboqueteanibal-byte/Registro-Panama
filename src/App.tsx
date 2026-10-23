@@ -25,6 +25,7 @@ import { AccionesRapidasModal } from './components/AccionesRapidasModal';
 import { BoletinModal } from './components/BoletinModal';
 import { CarnetModal } from './components/CarnetModal';
 import { ConfiguracionModal } from './components/ConfiguracionModal';
+import { AccesoDocenteRequerido } from './components/AccesoDocenteRequerido';
 import { AcudienteUsuario, Docente, GrupoAsignado } from './types';
 
 export default function App() {
@@ -252,25 +253,51 @@ export default function App() {
                 )}
 
                 {currentView === 'notas' && (
-                  <NotasView
-                    db={db}
-                    onUpdateDb={updateDb}
-                    onShowToast={showToast}
-                    docenteActivo={docenteActivo}
-                    grupoActivoDocente={grupoActivoDocente}
-                    onSelectGrupoActivoDocente={setGrupoActivoDocente}
-                  />
+                  docenteActivo ? (
+                    <NotasView
+                      db={db}
+                      onUpdateDb={updateDb}
+                      onShowToast={showToast}
+                      docenteActivo={docenteActivo}
+                      grupoActivoDocente={grupoActivoDocente}
+                      onSelectGrupoActivoDocente={setGrupoActivoDocente}
+                      onOpenLoginDocente={() => setLoginDocenteAbierto(true)}
+                      onNavigate={setCurrentView}
+                    />
+                  ) : (
+                    <AccesoDocenteRequerido
+                      modulo="notas"
+                      onOpenLoginDocente={() => setLoginDocenteAbierto(true)}
+                      onOpenLoginDocenteConCorreo={handleAbrirLoginDocenteConCorreo}
+                      onNavigate={setCurrentView}
+                      db={db}
+                      onLoginDirecto={handleLoginDocente}
+                    />
+                  )
                 )}
 
                 {currentView === 'asistencia' && (
-                  <AsistenciaView
-                    db={db}
-                    onUpdateDb={updateDb}
-                    onShowToast={showToast}
-                    docenteActivo={docenteActivo}
-                    grupoActivoDocente={grupoActivoDocente}
-                    onSelectGrupoActivoDocente={setGrupoActivoDocente}
-                  />
+                  docenteActivo ? (
+                    <AsistenciaView
+                      db={db}
+                      onUpdateDb={updateDb}
+                      onShowToast={showToast}
+                      docenteActivo={docenteActivo}
+                      grupoActivoDocente={grupoActivoDocente}
+                      onSelectGrupoActivoDocente={setGrupoActivoDocente}
+                      onOpenLoginDocente={() => setLoginDocenteAbierto(true)}
+                      onNavigate={setCurrentView}
+                    />
+                  ) : (
+                    <AccesoDocenteRequerido
+                      modulo="asistencia"
+                      onOpenLoginDocente={() => setLoginDocenteAbierto(true)}
+                      onOpenLoginDocenteConCorreo={handleAbrirLoginDocenteConCorreo}
+                      onNavigate={setCurrentView}
+                      db={db}
+                      onLoginDirecto={handleLoginDocente}
+                    />
+                  )
                 )}
 
                 {currentView === 'boletines' && (
@@ -315,6 +342,7 @@ export default function App() {
           onOpenConfig={() => setConfiguracionAbierta(true)}
           onNavigateToView={(v) => setCurrentView(v)}
           onShowToast={showToast}
+          docenteActivo={docenteActivo}
         />
       )}
 
