@@ -7,6 +7,8 @@ import {
   AcudienteUsuario,
   ComunicadoEscolar,
   JustificacionAusencia,
+  PeriodoTrimestral,
+  RegistroAuditoriaNota,
   MATERIAS_CONSEJERO,
   MATERIAS_ESPECIALES,
 } from '../types';
@@ -24,7 +26,71 @@ export interface AppDatabase {
   justificaciones: JustificacionAusencia[];
   annoLectivo: string;
   trimestreActual: number;
+  periodos: PeriodoTrimestral[];
+  auditoriaNotas: RegistroAuditoriaNota[];
 }
+
+export const PERIODOS_INICIALES: PeriodoTrimestral[] = [
+  {
+    trimestre: 1,
+    nombre: 'I Trimestre',
+    fechaInicio: '2026-03-02',
+    fechaFin: '2026-06-05',
+    fechaLimiteNotas: '2026-06-12',
+    estado: 'abierto',
+  },
+  {
+    trimestre: 2,
+    nombre: 'II Trimestre',
+    fechaInicio: '2026-06-15',
+    fechaFin: '2026-09-11',
+    fechaLimiteNotas: '2026-09-18',
+    estado: 'abierto',
+  },
+  {
+    trimestre: 3,
+    nombre: 'III Trimestre',
+    fechaInicio: '2026-09-21',
+    fechaFin: '2026-12-18',
+    fechaLimiteNotas: '2026-12-23',
+    estado: 'abierto',
+  },
+];
+
+export const AUDITORIA_INICIAL: RegistroAuditoriaNota[] = [
+  {
+    id: 'aud_1',
+    timestamp: Date.now() - 86400000 * 2,
+    fechaHora: '2026-04-12 09:15',
+    estudianteId: 'est_101',
+    estudianteNombre: 'Juan David González Morales',
+    materia: 'Matemáticas',
+    trimestre: 1,
+    accion: 'creacion',
+    valorNuevo: 4.8,
+    criterio: 'Prueba formativa',
+    docenteId: 'doc_201',
+    docenteNombre: 'Profa. Carmen Samudio de Morales',
+    docenteCorreo: 'carmen.samudio@meduca.edu.pa',
+    motivo: 'Evaluación diagnóstica inicial',
+  },
+  {
+    id: 'aud_2',
+    timestamp: Date.now() - 86400000,
+    fechaHora: '2026-04-13 11:30',
+    estudianteId: 'est_103',
+    estudianteNombre: 'Carlos Manuel Rodríguez Araúz',
+    materia: 'Español',
+    trimestre: 1,
+    accion: 'creacion',
+    valorNuevo: 3.2,
+    criterio: 'Lectura comprensiva',
+    docenteId: 'doc_201',
+    docenteNombre: 'Profa. Carmen Samudio de Morales',
+    docenteCorreo: 'carmen.samudio@meduca.edu.pa',
+    motivo: 'Control de lectura trimestral',
+  },
+];
 
 export const ESCUELA_INICIAL: EscuelaConfig = {
   nombrePlantel: 'C.E.B.G. Alto Boquete',
@@ -35,6 +101,7 @@ export const ESCUELA_INICIAL: EscuelaConfig = {
   distrito: 'Boquete',
   provincia: 'Chiriquí',
   telefono: '+507 720-1845',
+  pinAdministrador: '1234',
 };
 
 export const ESTUDIANTES_INICIALES: Estudiante[] = [
@@ -630,11 +697,18 @@ export function cargarBaseDeDatos(): AppDatabase {
 
         return {
           ...parsed,
+          escuela: {
+            ...ESCUELA_INICIAL,
+            ...(parsed.escuela || {}),
+            pinAdministrador: parsed.escuela?.pinAdministrador || '1234',
+          },
           docentes: docentesHidratados.length > 0 ? docentesHidratados : DOCENTES_INICIALES,
           calificaciones: calificacionesHidratadas,
           acudientes: parsed.acudientes && parsed.acudientes.length > 0 ? parsed.acudientes : ACUDIENTES_INICIALES,
           comunicados: parsed.comunicados && parsed.comunicados.length > 0 ? parsed.comunicados : COMUNICADOS_INICIALES,
           justificaciones: parsed.justificaciones ? parsed.justificaciones : JUSTIFICACIONES_INICIALES,
+          periodos: parsed.periodos && parsed.periodos.length > 0 ? parsed.periodos : PERIODOS_INICIALES,
+          auditoriaNotas: parsed.auditoriaNotas && parsed.auditoriaNotas.length > 0 ? parsed.auditoriaNotas : AUDITORIA_INICIAL,
         };
       }
     }
@@ -654,6 +728,8 @@ export function cargarBaseDeDatos(): AppDatabase {
     justificaciones: JUSTIFICACIONES_INICIALES,
     annoLectivo: '2026',
     trimestreActual: 1,
+    periodos: PERIODOS_INICIALES,
+    auditoriaNotas: AUDITORIA_INICIAL,
   };
   guardarBaseDeDatos(inicial);
   return inicial;
@@ -679,6 +755,8 @@ export function reiniciarBaseDeDatos(): AppDatabase {
     justificaciones: JUSTIFICACIONES_INICIALES,
     annoLectivo: '2026',
     trimestreActual: 1,
+    periodos: PERIODOS_INICIALES,
+    auditoriaNotas: AUDITORIA_INICIAL,
   };
   guardarBaseDeDatos(resetDb);
   return resetDb;
@@ -736,6 +814,28 @@ export function guardarSesionDocenteActiva(docente: Docente | null): void {
     }
   } catch (err) {
     console.error('Error guardando sesión activa docente:', err);
+  }
+}
+
+export const SESION_ADMIN_KEY = 'rue_sesion_admin_activa';
+
+export function obtenerSesionAdminActiva(): boolean {
+  try {
+    return localStorage.getItem(SESION_ADMIN_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function guardarSesionAdminActiva(activa: boolean): void {
+  try {
+    if (activa) {
+      localStorage.setItem(SESION_ADMIN_KEY, 'true');
+    } else {
+      localStorage.removeItem(SESION_ADMIN_KEY);
+    }
+  } catch (err) {
+    console.error('Error guardando sesión admin:', err);
   }
 }
 

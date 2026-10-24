@@ -11,6 +11,7 @@ import {
   Menu,
   Zap,
   GraduationCap,
+  LogOut,
 } from 'lucide-react';
 import { PWAInstallButton } from './pwa/PWAInstallButton';
 import { AppDatabase } from '../utils/storage';
@@ -27,6 +28,9 @@ interface HeaderProps {
   onOpenAccionesRapidas?: () => void;
   onToggleSidebar?: () => void;
   esModoPadre?: boolean;
+  esAdminActivo?: boolean;
+  onLogoutAdmin?: () => void;
+  onSwitchToGateway?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -40,6 +44,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAccionesRapidas,
   onToggleSidebar,
   esModoPadre = false,
+  esAdminActivo = false,
+  onLogoutAdmin,
+  onSwitchToGateway,
 }) => {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
 
@@ -212,6 +219,26 @@ export const Header: React.FC<HeaderProps> = ({
               title="Acceder al Portal Familiar para Padres de Familia"
             >
               <span>👨‍👩‍👧 Padres</span>
+            </button>
+          )}
+
+          {/* Indicador de Dirección del Plantel */}
+          {esAdminActivo && (
+            <span className="hidden md:inline-flex items-center gap-1.5 bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs shadow-xs">
+              <School className="w-3.5 h-3.5 text-slate-950" />
+              <span>Dirección</span>
+            </span>
+          )}
+
+          {/* Botón de Cambiar de Estamento / Salir */}
+          {onSwitchToGateway && (
+            <button
+              onClick={onSwitchToGateway}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-amber-200 border border-white/20 text-xs font-bold transition"
+              title="Cambiar de Estamento (Volver al Portal Tripartito)"
+            >
+              <LogOut className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Portal</span>
             </button>
           )}
 

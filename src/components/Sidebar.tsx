@@ -20,6 +20,8 @@ import {
   Layers,
   CheckCircle2,
   Lock,
+  Calendar,
+  History,
 } from 'lucide-react';
 import { ViewType } from './Navbar';
 import { AppDatabase, obtenerDocenteOfflineRegistrado } from '../utils/storage';
@@ -53,6 +55,9 @@ interface SidebarProps {
   onOpenAccionesRapidas: () => void;
   onOpenConfig: () => void;
   db: AppDatabase;
+  esAdminAutenticado?: boolean;
+  onLogoutAdmin?: () => void;
+  onSwitchToGateway?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -69,6 +74,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenAccionesRapidas,
   onOpenConfig,
   db,
+  esAdminAutenticado = false,
+  onLogoutAdmin,
+  onSwitchToGateway,
 }) => {
   // Conteo de estudiantes y comunicados
   const totalEstudiantes = db.estudiantes.length;
@@ -144,6 +152,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon: Bell,
           badge: totalComunicados > 0 ? totalComunicados.toString() : undefined,
           badgeColor: 'text-amber-300 bg-amber-950/80 border-amber-500/30',
+        },
+      ],
+    },
+    {
+      categoria: 'Supervisión Directiva',
+      items: [
+        {
+          id: 'periodos' as ViewType,
+          label: 'Períodos & Cierre',
+          shortLabel: 'Períodos',
+          icon: Calendar,
+          badge: `T${db.trimestreActual}`,
+        },
+        {
+          id: 'auditoria' as ViewType,
+          label: 'Bitácora de Auditoría',
+          shortLabel: 'Auditoría',
+          icon: History,
+          badge: (db.auditoriaNotas?.length || 0).toString(),
+          badgeColor: 'text-blue-300 bg-blue-950/80 border-blue-500/30',
         },
       ],
     },
@@ -464,6 +492,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* PIE DEL SIDEBAR (Ajustes y estado institucional) */}
         <div className="p-3 border-t border-blue-800/40 shrink-0 space-y-2 bg-[#001830]/60">
+          {onSwitchToGateway && (
+            <button
+              onClick={() => {
+                onSwitchToGateway();
+                if (isOpenMobile) onCloseMobile();
+              }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-amber-200 hover:text-white bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-xs font-bold transition ${
+                isCollapsed && !isOpenMobile ? 'justify-center px-0' : ''
+              }`}
+              title="Cambiar de Estamento (Volver al Selector Tripartito)"
+            >
+              <LogOut className="w-4 h-4 text-amber-400 shrink-0" />
+              {(!isCollapsed || isOpenMobile) && (
+                <span className="truncate">Cambiar de Estamento</span>
+              )}
+            </button>
+          )}
+
           <button
             onClick={() => {
               onOpenConfig();

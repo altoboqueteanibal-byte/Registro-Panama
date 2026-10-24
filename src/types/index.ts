@@ -102,7 +102,39 @@ export interface EscuelaConfig {
   distrito: string;
   provincia: string;
   telefono: string;
+  pinAdministrador?: string;
 }
+
+export interface PeriodoTrimestral {
+  trimestre: number; // 1, 2, 3
+  nombre: string; // 'I Trimestre', 'II Trimestre', 'III Trimestre'
+  fechaInicio: string;
+  fechaFin: string;
+  fechaLimiteNotas: string;
+  estado: 'abierto' | 'cerrado';
+  cerradoPor?: string;
+  fechaCierre?: string;
+}
+
+export interface RegistroAuditoriaNota {
+  id: string;
+  timestamp: number;
+  fechaHora: string;
+  estudianteId: string;
+  estudianteNombre: string;
+  materia: string;
+  trimestre: number;
+  accion: 'creacion' | 'edicion' | 'eliminacion';
+  valorAnterior?: number;
+  valorNuevo?: number;
+  criterio: string;
+  docenteId: string;
+  docenteNombre: string;
+  docenteCorreo: string;
+  motivo?: string;
+}
+
+export type RolSesion = 'administrador' | 'docente' | 'acudiente' | null;
 
 export const MATERIAS_CONSEJERO = [
   'Español',

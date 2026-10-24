@@ -17,7 +17,9 @@ export type ViewType =
   | 'notas'
   | 'asistencia'
   | 'boletines'
-  | 'comunicados';
+  | 'comunicados'
+  | 'periodos'
+  | 'auditoria';
 
 interface NavbarProps {
   currentView: ViewType;

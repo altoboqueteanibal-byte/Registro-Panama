@@ -6,6 +6,8 @@ import {
   AppDatabase,
   obtenerSesionDocenteActiva,
   guardarSesionDocenteActiva,
+  obtenerSesionAdminActiva,
+  guardarSesionAdminActiva,
 } from './utils/storage';
 import { Header } from './components/Header';
 import { ViewType } from './components/Navbar';
@@ -17,6 +19,9 @@ import { NotasView } from './components/NotasView';
 import { AsistenciaView } from './components/AsistenciaView';
 import { BoletinesView } from './components/BoletinesView';
 import { ComunicadosAdminView } from './components/ComunicadosAdminView';
+import { PeriodosTrimestralesView } from './components/PeriodosTrimestralesView';
+import { AuditoriaNotasView } from './components/AuditoriaNotasView';
+import { PortalTripartitoGateway } from './components/PortalTripartitoGateway';
 import { PortalPadresView } from './components/portal-padres/PortalPadresView';
 import { LoginPadresModal } from './components/portal-padres/LoginPadresModal';
 import { LoginDocenteModal } from './components/portal-docentes/LoginDocenteModal';
@@ -42,6 +47,11 @@ export default function App() {
     }
   });
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState<boolean>(false);
+
+  // Estado de Sesión de Dirección / Administrador
+  const [esAdminActivo, setEsAdminActivo] = useState<boolean>(() => {
+    return obtenerSesionAdminActiva();
+  });
 
   // Estado del Portal de Padres
   const [acudienteActivo, setAcudienteActivo] = useState<AcudienteUsuario | null>(null);
@@ -82,9 +92,37 @@ export default function App() {
     setToastMessage(msg);
   };
 
+  const handleLoginAdmin = () => {
+    setEsAdminActivo(true);
+    guardarSesionAdminActiva(true);
+    setDocenteActivo(null);
+    guardarSesionDocenteActiva(null);
+    setAcudienteActivo(null);
+    setCurrentView('dashboard');
+    showToast('🏛️ Sesión de Dirección del Plantel iniciada');
+  };
+
+  const handleLogoutAdmin = () => {
+    setEsAdminActivo(false);
+    guardarSesionAdminActiva(false);
+    showToast('👋 Sesión de Dirección cerrada');
+  };
+
+  const handleSwitchToGateway = () => {
+    setEsAdminActivo(false);
+    guardarSesionAdminActiva(false);
+    setDocenteActivo(null);
+    guardarSesionDocenteActiva(null);
+    setAcudienteActivo(null);
+    showToast('🚪 Regresando al portal de selección de estamento');
+  };
+
   const handleLoginDocente = (docente: Docente) => {
     setDocenteActivo(docente);
     guardarSesionDocenteActiva(docente);
+    setEsAdminActivo(false);
+    guardarSesionAdminActiva(false);
+    setAcudienteActivo(null);
     const grupoInicial: GrupoAsignado =
       docente.tipo === 'consejero'
         ? { grado: docente.gradoTutor || '3°', grupo: docente.grupoTutor || 'A' }
@@ -93,15 +131,13 @@ export default function App() {
     setLoginDocenteAbierto(false);
     setCorreoLoginDocente(null);
     showToast(`👋 ¡Bienvenido(a), ${docente.nombre}! Aula virtual activa`);
-    if (currentView === 'dashboard' || currentView === 'docentes') {
-      setCurrentView('notas');
-    }
+    setCurrentView('notas');
   };
 
   const handleLogoutDocente = () => {
     setDocenteActivo(null);
     guardarSesionDocenteActiva(null);
-    showToast('👋 Sesión docente cerrada. Modo administración general activo');
+    showToast('👋 Sesión docente cerrada');
   };
 
   const handleAbrirLoginDocenteConCorreo = (correo: string) => {
@@ -134,6 +170,9 @@ export default function App() {
     }
   }, [toastMessage]);
 
+  // Determinación de sesión activa para control estricto de roles
+  const estaAutenticado = esAdminActivo || docenteActivo !== null || acudienteActivo !== null;
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-blue-100">
       {/* Header Institucional MEDUCA */}
@@ -151,15 +190,18 @@ export default function App() {
         onOpenPortalPadres={() => setLoginPadresAbierto(true)}
         onOpenLoginDocente={() => setLoginDocenteAbierto(true)}
         docenteActivo={docenteActivo}
+        esAdminActivo={esAdminActivo}
+        onLogoutAdmin={handleLogoutAdmin}
+        onSwitchToGateway={estaAutenticado ? handleSwitchToGateway : undefined}
         onOpenAccionesRapidas={() => setAccionesRapidasAbierto(true)}
-        onToggleSidebar={!acudienteActivo ? handleToggleSidebarHeader : undefined}
+        onToggleSidebar={estaAutenticado && !acudienteActivo ? handleToggleSidebarHeader : undefined}
         esModoPadre={!!acudienteActivo}
       />
 
       {/* Estructura con Menú Lateral Colapsable y Contenido */}
       <div className="flex-1 flex w-full relative">
-        {/* Menú Lateral Colapsable (solo activo en modo institucional) */}
-        {!acudienteActivo && (
+        {/* Menú Lateral Colapsable (solo activo cuando hay sesión institucional de Dirección o Docente) */}
+        {estaAutenticado && !acudienteActivo && (
           <Sidebar
             currentView={currentView}
             onSelectView={(v) => {
@@ -177,13 +219,16 @@ export default function App() {
             onOpenAccionesRapidas={() => setAccionesRapidasAbierto(true)}
             onOpenConfig={() => setConfiguracionAbierta(true)}
             db={db}
+            esAdminAutenticado={esAdminActivo}
+            onLogoutAdmin={handleLogoutAdmin}
+            onSwitchToGateway={handleSwitchToGateway}
           />
         )}
 
         {/* Área de Contenido Principal con espaciado dinámico según estado colapsado */}
         <div
           className={`flex-1 min-w-0 transition-all duration-300 ease-in-out pb-12 ${
-            !acudienteActivo
+            estaAutenticado && !acudienteActivo
               ? isSidebarCollapsed
                 ? 'lg:pl-[76px]'
                 : 'lg:pl-[268px]'
@@ -191,18 +236,16 @@ export default function App() {
           }`}
         >
           <main className="max-w-7xl w-full mx-auto p-3 sm:p-6 no-print">
-            {/* Banner de Sesión Docente si hay educador autenticado */}
-            {!acudienteActivo && docenteActivo && (
-              <DocenteSessionBanner
-                docente={docenteActivo}
-                grupoActivo={grupoActivoDocente}
-                onSelectGrupoActivo={setGrupoActivoDocente}
-                onLogoutDocente={handleLogoutDocente}
+            {/* PORTAL TRIPARTITO INICIAL (Cuando no hay sesión activa) */}
+            {!estaAutenticado ? (
+              <PortalTripartitoGateway
+                db={db}
+                onLoginAdmin={handleLoginAdmin}
+                onOpenLoginDocente={() => setLoginDocenteAbierto(true)}
+                onOpenPortalPadres={() => setLoginPadresAbierto(true)}
               />
-            )}
-
-            {/* VISTA PORTAL DE PADRES (Si hay acudiente autenticado) */}
-            {acudienteActivo ? (
+            ) : acudienteActivo ? (
+              /* VISTA PORTAL DE PADRES (Si hay acudiente autenticado) */
               <PortalPadresView
                 db={db}
                 acudiente={acudienteActivo}
@@ -210,18 +253,25 @@ export default function App() {
                   setAcudienteActivo(null);
                   showToast('👋 Sesión de acudiente cerrada');
                 }}
-                onSwitchToAdmin={() => {
-                  setAcudienteActivo(null);
-                  setCurrentView('dashboard');
-                }}
+                onSwitchToAdmin={handleSwitchToGateway}
                 onOpenBoletin={(id) => setBoletinEstudianteId(id)}
                 onOpenCarnet={(id) => setCarnetEstudianteId(id)}
                 onUpdateDb={updateDb}
                 onShowToast={showToast}
               />
             ) : (
-              /* VISTAS ADMINISTRATIVAS Y DOCENTES */
+              /* VISTAS INSTITUCIONALES (DIRECCIÓN O DOCENTE OFICIAL) */
               <>
+                {/* Banner de Sesión Docente si hay educador autenticado */}
+                {docenteActivo && (
+                  <DocenteSessionBanner
+                    docente={docenteActivo}
+                    grupoActivo={grupoActivoDocente}
+                    onSelectGrupoActivo={setGrupoActivoDocente}
+                    onLogoutDocente={handleLogoutDocente}
+                  />
+                )}
+
                 {currentView === 'dashboard' && (
                   <DashboardView
                     db={db}
@@ -317,6 +367,21 @@ export default function App() {
                     onOpenPortalPadres={() => setLoginPadresAbierto(true)}
                   />
                 )}
+
+                {currentView === 'periodos' && (
+                  <PeriodosTrimestralesView
+                    db={db}
+                    onUpdateDb={updateDb}
+                    onShowToast={showToast}
+                  />
+                )}
+
+                {currentView === 'auditoria' && (
+                  <AuditoriaNotasView
+                    db={db}
+                    onShowToast={showToast}
+                  />
+                )}
               </>
             )}
           </main>
@@ -351,6 +416,10 @@ export default function App() {
         <LoginPadresModal
           db={db}
           onSuccessLogin={(acudiente) => {
+            setEsAdminActivo(false);
+            guardarSesionAdminActiva(false);
+            setDocenteActivo(null);
+            guardarSesionDocenteActiva(null);
             setAcudienteActivo(acudiente);
             setLoginPadresAbierto(false);
           }}

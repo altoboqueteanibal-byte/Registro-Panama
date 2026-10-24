@@ -16,6 +16,7 @@ import {
   Sparkles,
   ArrowRight,
   ExternalLink,
+  Lock,
 } from 'lucide-react';
 import {
   GRADOS,
@@ -29,6 +30,7 @@ import {
   GrupoAsignado,
   SUBMATERIAS_TECNOLOGIA,
   MATERIA_TECNOLOGIA_UNIFICADA,
+  RegistroAuditoriaNota,
 } from '../types';
 import { AppDatabase } from '../utils/storage';
 import {
@@ -178,11 +180,22 @@ export const NotasView: React.FC<NotasViewProps> = ({
       )
     : null;
 
+  // Configuración de período trimestral y estado de cierre
+  const periodoActualConfig = db.periodos?.find(
+    (p) => p.trimestre === trimestreSeleccionado
+  );
+  const estaTrimestreCerrado = periodoActualConfig?.estado === 'cerrado';
+
   // Agregar nueva nota diaria
   const handleAgregarNota = (e: React.FormEvent) => {
     e.preventDefault();
     if (!estudianteIdDetalle || !esGrupoAutorizado || !esMateriaAutorizada) {
       onShowToast('🚫 Acción bloqueada: No autorizado para asentar notas en este grupo o materia');
+      return;
+    }
+
+    if (estaTrimestreCerrado) {
+      onShowToast('🔒 Período Cerrado: Este trimestre está oficialmente sellado por la Dirección');
       return;
     }
 
@@ -228,7 +241,29 @@ export const NotasView: React.FC<NotasViewProps> = ({
       nuevasCalificaciones = [...db.calificaciones, nuevaCal];
     }
 
-    onUpdateDb({ ...db, calificaciones: nuevasCalificaciones });
+    // Registro de Auditoría Inmutable
+    const nuevoRegistroAuditoria: RegistroAuditoriaNota = {
+      id: 'aud_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      timestamp: Date.now(),
+      fechaHora: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      estudianteId: estudianteIdDetalle,
+      estudianteNombre: estudianteEnDetalle?.nombre || 'Estudiante',
+      materia: materiaSeleccionada,
+      trimestre: trimestreSeleccionado,
+      accion: 'creacion',
+      valorNuevo: Number(valorNum.toFixed(1)),
+      criterio: nuevaNotaTipo,
+      docenteId: docenteActivo.id,
+      docenteNombre: docenteActivo.nombre,
+      docenteCorreo: docenteActivo.correo,
+      motivo: nuevaNotaObservacion.trim() || undefined,
+    };
+
+    onUpdateDb({
+      ...db,
+      calificaciones: nuevasCalificaciones,
+      auditoriaNotas: [nuevoRegistroAuditoria, ...(db.auditoriaNotas || [])],
+    });
     onShowToast(`✅ Nota de ${nuevaNota.valor.toFixed(1)} registrada`);
     setNuevaNotaObservacion('');
   };
@@ -236,6 +271,12 @@ export const NotasView: React.FC<NotasViewProps> = ({
   // Eliminar nota diaria
   const handleEliminarNota = (notaId: string) => {
     if (!estudianteIdDetalle) return;
+
+    if (estaTrimestreCerrado) {
+      onShowToast('🔒 Período Cerrado: No se pueden eliminar notas de un trimestre sellado');
+      return;
+    }
+
     if (!window.confirm('¿Desea eliminar esta nota diaria?')) return;
 
     const calExistente = db.calificaciones.find(
@@ -248,6 +289,7 @@ export const NotasView: React.FC<NotasViewProps> = ({
 
     if (!calExistente) return;
 
+    const notaEliminada = calExistente.notasDiarias.find((n) => n.id === notaId);
     const notasRestantes = calExistente.notasDiarias.filter((n) => n.id !== notaId);
     let nuevasCalificaciones: CalificacionMateria[];
 
@@ -259,7 +301,29 @@ export const NotasView: React.FC<NotasViewProps> = ({
       );
     }
 
-    onUpdateDb({ ...db, calificaciones: nuevasCalificaciones });
+    // Registro de Auditoría de Eliminación
+    const nuevoRegistroAuditoria: RegistroAuditoriaNota = {
+      id: 'aud_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      timestamp: Date.now(),
+      fechaHora: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      estudianteId: estudianteIdDetalle,
+      estudianteNombre: estudianteEnDetalle?.nombre || 'Estudiante',
+      materia: materiaSeleccionada,
+      trimestre: trimestreSeleccionado,
+      accion: 'eliminacion',
+      valorAnterior: notaEliminada?.valor,
+      criterio: notaEliminada?.desc || 'Nota Diaria',
+      docenteId: docenteActivo.id,
+      docenteNombre: docenteActivo.nombre,
+      docenteCorreo: docenteActivo.correo,
+      motivo: 'Eliminación por educador titular',
+    };
+
+    onUpdateDb({
+      ...db,
+      calificaciones: nuevasCalificaciones,
+      auditoriaNotas: [nuevoRegistroAuditoria, ...(db.auditoriaNotas || [])],
+    });
     onShowToast('🗑️ Nota eliminada');
   };
 
@@ -513,6 +577,34 @@ export const NotasView: React.FC<NotasViewProps> = ({
           </div>
         </div>
       </div>
+
+      {estaTrimestreCerrado && (
+        <div className="bg-rose-50 border-2 border-rose-300 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-rose-600 text-white font-black shrink-0 shadow-sm">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-black text-rose-950 text-sm">
+                  Trimestre {trimestreSeleccionado} Oficialmente Cerrado y Sellado
+                </span>
+                <span className="text-[10px] font-black uppercase bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full border border-rose-300">
+                  Acta Sellada
+                </span>
+              </div>
+              <p className="text-rose-700 text-xs mt-0.5">
+                Por disposición de la Dirección, este período concluyó. La planilla está en modo <strong>Solo Consulta</strong>; no se admiten modificaciones de calificaciones.
+              </p>
+            </div>
+          </div>
+          {periodoActualConfig?.fechaCierre && (
+            <span className="text-[11px] font-mono text-rose-800 bg-white/80 px-3 py-1.5 rounded-xl border border-rose-300 shrink-0 font-bold">
+              Sellado el: {periodoActualConfig.fechaCierre}
+            </span>
+          )}
+        </div>
+      )}
 
       {!esGrupoAutorizado || !esMateriaAutorizada ? (
         <div className="bg-amber-50 border-2 border-amber-300 p-8 rounded-2xl text-center space-y-3 shadow-xs">
@@ -1055,11 +1147,22 @@ export const NotasView: React.FC<NotasViewProps> = ({
             </div>
           </div>
 
-          {/* Formulario para agregar nueva nota */}
-          <form
-            onSubmit={handleAgregarNota}
-            className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3"
-          >
+          {/* Formulario para agregar nueva nota o aviso de cierre */}
+          {estaTrimestreCerrado ? (
+            <div className="bg-rose-50 border border-rose-300 p-4 rounded-xl text-center space-y-1">
+              <div className="flex items-center justify-center gap-2 text-rose-900 font-extrabold text-xs">
+                <Lock className="w-4 h-4 text-rose-700" />
+                <span>Trimestre {trimestreSeleccionado} Cerrado y Sellado por la Dirección</span>
+              </div>
+              <p className="text-[11px] text-rose-700">
+                La libreta está en modo Solo Lectura. No se pueden agregar nuevas calificaciones en este período.
+              </p>
+            </div>
+          ) : (
+            <form
+              onSubmit={handleAgregarNota}
+              className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3"
+            >
             <div className="flex items-center gap-2 text-xs font-bold text-[#003366]">
               <Plus className="w-4 h-4 text-[#FFC107]" />
               <span>Registrar Nueva Nota Diaria</span>
@@ -1134,6 +1237,7 @@ export const NotasView: React.FC<NotasViewProps> = ({
               </button>
             </div>
           </form>
+          )}
 
           {/* Historial de Notas Diarias Registradas */}
           <div>
@@ -1179,13 +1283,15 @@ export const NotasView: React.FC<NotasViewProps> = ({
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => handleEliminarNota(nota.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                        title="Eliminar esta nota"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {!estaTrimestreCerrado && (
+                        <button
+                          onClick={() => handleEliminarNota(nota.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                          title="Eliminar esta nota"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   ))}
               </div>
