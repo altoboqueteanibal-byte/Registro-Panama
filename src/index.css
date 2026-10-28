@@ -8,24 +8,127 @@
   }
 }
 
+/* ==========================================================================
+   CONFIGURACIÓN OFICIAL DE IMPRESIÓN EN FORMATO A4 (210mm x 297mm) - MEDUCA
+   ========================================================================== */
+
+/* Estándar A4 Vertical (Portrait) */
+@page {
+  size: A4 portrait;
+  margin: 8mm 10mm 8mm 10mm;
+}
+
+/* Estándar A4 Horizontal (Landscape) para Cuadros de Calificaciones y Asistencia */
+@page a4-landscape {
+  size: A4 landscape;
+  margin: 8mm 10mm 8mm 10mm;
+}
+
 @media print {
-  body {
-    background: white !important;
-    color: black !important;
-    padding: 0 !important;
+  /* Forzar colores exactos de fondo y texto (evita que el navegador quite los fondos institucionales) */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
-  .no-print {
+
+  html,
+  body {
+    width: 210mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ocultar elementos de navegación y UI de pantalla */
+  .no-print,
+  nav,
+  header.no-print,
+  aside,
+  button:not(.allow-print),
+  .toast,
+  [role="alert"] {
     display: none !important;
   }
+
+  /* Mostrar elementos exclusivos para impresión */
   .print-only {
     display: block !important;
   }
+
+  .print-flex {
+    display: flex !important;
+  }
+
+  /* Contenedor A4 vertical exacto para 1 sola hoja (Boletín individual) */
+  .a4-page-single {
+    width: 100% !important;
+    max-width: 190mm !important;
+    height: auto !important;
+    max-height: 275mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    overflow: hidden !important;
+  }
+
+  /* Contenedor de hoja A4 para impresión en lote (Cada alumno en una nueva hoja A4) */
+  .a4-sheet {
+    width: 100% !important;
+    max-width: 190mm !important;
+    min-height: 270mm !important;
+    box-sizing: border-box !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    margin: 0 auto !important;
+    padding: 4mm 2mm !important;
+  }
+
+  .a4-sheet:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  /* Página base de impresión */
   .print-page {
     box-shadow: none !important;
     border: none !important;
     margin: 0 !important;
-    padding: 1.5cm !important;
+    padding: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+  }
+
+  /* Modo horizontal A4 */
+  .print-landscape {
+    page: a4-landscape !important;
+    width: 297mm !important;
+    max-width: 277mm !important;
+  }
+
+  /* Prevención estricta de cortes feos entre páginas */
+  table,
+  tr,
+  td,
+  th,
+  .avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
   }
 }

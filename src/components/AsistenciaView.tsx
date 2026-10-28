@@ -10,6 +10,7 @@ import {
   Download,
   Users,
   Info,
+  Printer,
 } from 'lucide-react';
 import {
   GRADOS,
@@ -84,6 +85,7 @@ export const AsistenciaView: React.FC<AsistenciaViewProps> = ({
     new Date().toISOString().split('T')[0]
   );
   const [pestana, setPestana] = useState<'pase' | 'paseu'>('pase');
+  const [modalImprimirAsistenciaA4, setModalImprimirAsistenciaA4] = useState(false);
 
   const esGrupoAutorizado = gruposPermitidos.some(
     (g) => g.grado === gradoSeleccionado && g.grupo === grupoSeleccionado
@@ -253,8 +255,16 @@ export const AsistenciaView: React.FC<AsistenciaViewProps> = ({
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setModalImprimirAsistenciaA4(true)}
+              className="inline-flex items-center gap-1.5 bg-[#003366] hover:bg-[#002244] text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+              title="Imprimir Registro Oficial de Asistencia en Formato A4"
+            >
+              <Printer className="w-3.5 h-3.5 text-[#FFC107]" />
+              <span>Imprimir Asistencia A4</span>
+            </button>
+            <button
               onClick={exportarAsistenciaCSV}
-              className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition border border-slate-200"
+              className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition border border-slate-200 cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 text-slate-500" />
               <span>Exportar Reporte</span>
@@ -642,6 +652,181 @@ export const AsistenciaView: React.FC<AsistenciaViewProps> = ({
                   })}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE IMPRESIÓN OFICIAL DEL REGISTRO DE ASISTENCIA EN FORMATO A4 */}
+      {modalImprimirAsistenciaA4 && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/85 backdrop-blur-xs flex flex-col items-center p-2 sm:p-4 print:p-0 print:bg-white print:static print:inset-auto">
+          {/* Barra de herramientas (no-print) */}
+          <div className="w-full max-w-4xl bg-[#003366] text-white p-3 sm:px-6 sm:py-3.5 rounded-t-2xl shadow-xl flex items-center justify-between no-print sticky top-2 z-50 border border-blue-400/30">
+            <div className="flex items-center gap-2.5">
+              <Printer className="w-5 h-5 text-[#FFC107]" />
+              <div>
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  Registro Oficial de Asistencia Escolar y PASE-U
+                  <span className="text-[10px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded uppercase">
+                    Formato A4
+                  </span>
+                </h3>
+                <p className="text-[11px] text-blue-200">
+                  Grado {gradoSeleccionado} &ldquo;{grupoSeleccionado}&rdquo; &bull; Fecha: {fechaSeleccionada}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => window.print()}
+                className="bg-[#FFC107] hover:bg-amber-400 text-slate-950 font-black text-xs py-2 px-4 rounded-xl flex items-center gap-1.5 transition shadow-md cursor-pointer"
+                title="Imprimir registro en papel A4 vertical"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Imprimir Asistencia A4</span>
+              </button>
+              <button
+                onClick={() => setModalImprimirAsistenciaA4(false)}
+                className="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10 cursor-pointer"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Registro Impreso en Formato A4 */}
+          <div className="w-full max-w-4xl bg-white rounded-b-2xl p-6 sm:p-8 space-y-4 print:p-2 print:m-0 print:border-none print:shadow-none print-page a4-page-single">
+            {/* Membrete Oficial */}
+            <div className="text-center border-b-2 border-[#003366] pb-3 print:pb-1.5">
+              <div className="inline-block mb-1 print:mb-0.5">
+                <span className="text-[11px] font-extrabold tracking-widest text-[#003366] uppercase block print:text-[8.5px]">
+                  REPÚBLICA DE PANAMÁ &bull; GOBIERNO NACIONAL
+                </span>
+                <span className="text-xs font-bold text-slate-700 uppercase block print:text-[8px]">
+                  MINISTERIO DE EDUCACIÓN &bull; DIRECCIÓN GENERAL DE EDUCACIÓN
+                </span>
+                <span className="text-xs text-slate-600 block print:text-[8px]">
+                  {db.escuela.regionEducativa} &bull; {db.escuela.nombrePlantel}
+                </span>
+              </div>
+              <h1 className="text-lg font-black text-[#003366] uppercase tracking-wide mt-1 print:text-sm">
+                PARTE DIARIO OFICIAL DE ASISTENCIA Y MONITOREO PASE-U
+              </h1>
+              <p className="text-xs font-bold text-slate-600 uppercase tracking-wider print:text-[8px]">
+                NIVEL DE EDUCACIÓN PRIMARIA &bull; AÑO LECTIVO {db.annoLectivo}
+              </p>
+            </div>
+
+            {/* Metadatos */}
+            <div className="grid grid-cols-4 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-200 print:bg-white print:border-slate-300 print:p-1.5 print:text-[9px]">
+              <div>
+                <span className="text-slate-400 font-bold uppercase block text-[8px]">Fecha del Registro:</span>
+                <span className="font-extrabold text-[#003366]">{fechaSeleccionada}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold uppercase block text-[8px]">Grado y Grupo:</span>
+                <span className="font-bold text-slate-800">{gradoSeleccionado} &ldquo;{grupoSeleccionado}&rdquo;</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold uppercase block text-[8px]">Total Matrícula:</span>
+                <span className="font-bold text-slate-800">{estudiantesFiltrados.length} Estudiantes</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold uppercase block text-[8px]">Docente Responsable:</span>
+                <span className="font-bold text-slate-800">{docenteActivo.nombre}</span>
+              </div>
+            </div>
+
+            {/* Resumen de Asistencia del Día */}
+            <div className="grid grid-cols-5 gap-2 text-center text-xs print:text-[8.5px]">
+              <div className="p-2 bg-emerald-50 border border-emerald-300 rounded-lg print:p-1">
+                <span className="block text-[8px] uppercase font-bold text-emerald-800">Presentes</span>
+                <span className="font-black text-sm print:text-xs text-emerald-900">{conteoP}</span>
+              </div>
+              <div className="p-2 bg-rose-50 border border-rose-300 rounded-lg print:p-1">
+                <span className="block text-[8px] uppercase font-bold text-rose-800">Ausentes</span>
+                <span className="font-black text-sm print:text-xs text-rose-900">{conteoA}</span>
+              </div>
+              <div className="p-2 bg-amber-50 border border-amber-300 rounded-lg print:p-1">
+                <span className="block text-[8px] uppercase font-bold text-amber-800">Tardanzas</span>
+                <span className="font-black text-sm print:text-xs text-amber-900">{conteoT}</span>
+              </div>
+              <div className="p-2 bg-sky-50 border border-sky-300 rounded-lg print:p-1">
+                <span className="block text-[8px] uppercase font-bold text-sky-800">Justificados</span>
+                <span className="font-black text-sm print:text-xs text-sky-900">{conteoJ}</span>
+              </div>
+              <div className="p-2 bg-blue-50 border border-blue-300 rounded-lg print:p-1">
+                <span className="block text-[8px] uppercase font-bold text-[#003366]">% Asistencia</span>
+                <span className="font-black text-sm print:text-xs text-[#003366]">{porcentajeDia}%</span>
+              </div>
+            </div>
+
+            {/* Tabla Oficial de Asistencia */}
+            <table className="w-full text-left border-collapse text-xs border border-slate-300 print:text-[8.5px]">
+              <thead>
+                <tr className="bg-[#003366] text-white text-[10px] font-bold uppercase text-center print:text-[8px]">
+                  <th className="py-1.5 px-2 w-8">N°</th>
+                  <th className="py-1.5 px-3 text-left">Estudiante</th>
+                  <th className="py-1.5 px-2 w-28">Cédula</th>
+                  <th className="py-1.5 px-2 w-24">Estado Hoy</th>
+                  <th className="py-1.5 px-2 w-28">Asistencia Acum.</th>
+                  <th className="py-1.5 px-2 w-28">Estatus PASE-U</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {estudiantesFiltrados.map((est, idx) => {
+                  const reg = db.asistencia.find(
+                    (a) => a.estudianteId === est.id && a.fecha === fechaSeleccionada && a.annoLectivo === db.annoLectivo
+                  );
+                  const asisTotal = calcularAsistenciaEstudiante(est.id, db.asistencia, db.annoLectivo);
+                  const estado = reg?.estado || 'P';
+
+                  return (
+                    <tr key={est.id} className="hover:bg-slate-50">
+                      <td className="py-1 px-2 text-center text-slate-400 border-r border-slate-200">{idx + 1}</td>
+                      <td className="py-1 px-3 font-semibold text-slate-800 border-r border-slate-200">{est.nombre}</td>
+                      <td className="py-1 px-2 font-mono text-slate-600 border-r border-slate-200 text-center">{est.cedula}</td>
+                      <td className="py-1 px-2 text-center border-r border-slate-200 font-bold">
+                        <span className={`px-2 py-0.5 rounded text-[10px] ${
+                          estado === 'P' ? 'bg-emerald-100 text-emerald-800' :
+                          estado === 'A' ? 'bg-rose-100 text-rose-800' :
+                          estado === 'T' ? 'bg-amber-100 text-amber-800' :
+                          'bg-sky-100 text-sky-800'
+                        }`}>
+                          {ESTADOS_ASISTENCIA[estado]?.label || estado}
+                        </span>
+                      </td>
+                      <td className="py-1 px-2 text-center font-bold border-r border-slate-200">
+                        {asisTotal.porcentaje}% ({asisTotal.presentes} de {asisTotal.total})
+                      </td>
+                      <td className="py-1 px-2 text-center font-bold">
+                        {asisTotal.paseuAprobado ? (
+                          <span className="text-emerald-700">✓ Cumple (&ge;90%)</span>
+                        ) : (
+                          <span className="text-rose-600 font-bold">⚠️ En Riesgo (&lt;90%)</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Firmas Oficiales */}
+            <div className="grid grid-cols-2 gap-12 pt-8 text-center text-xs print:pt-4 avoid-break">
+              <div>
+                <div className="border-t border-slate-400 pt-1 w-3/4 mx-auto">
+                  <p className="font-bold text-slate-800">{docenteActivo.nombre}</p>
+                  <p className="text-[10px] text-slate-500 uppercase">Docente Responsable</p>
+                </div>
+              </div>
+              <div>
+                <div className="border-t border-slate-400 pt-1 w-3/4 mx-auto">
+                  <p className="font-bold text-slate-800">{db.escuela.director}</p>
+                  <p className="text-[10px] text-slate-500 uppercase">Director(a) del Plantel Educativo</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

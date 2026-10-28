@@ -28,30 +28,44 @@ export const CarnetModal: React.FC<CarnetModalProps> = ({
         <div className="bg-[#003366] text-white p-3.5 flex items-center justify-between no-print">
           <div className="flex items-center gap-2">
             <IdCard className="w-5 h-5 text-[#FFC107]" />
-            <h3 className="text-xs font-bold uppercase tracking-wider">
-              Carnet Estudiantil Digital
-            </h3>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider">
+                Carnet Estudiantil Digital
+              </h3>
+              <p className="text-[10px] text-blue-200">Formato A4 para impresión y recorte</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="bg-[#FFC107] hover:bg-amber-400 text-slate-950 font-bold text-xs py-1 px-3 rounded-lg flex items-center gap-1"
+              className="bg-[#FFC107] hover:bg-amber-400 text-slate-950 font-bold text-xs py-1.5 px-3 rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title="Imprimir carnet en hoja A4 con marcas de corte"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Imprimir</span>
+              <span>Imprimir A4</span>
             </button>
             <button
               onClick={onClose}
-              className="text-white/80 hover:text-white p-1 rounded-lg"
+              className="text-white/80 hover:text-white p-1 rounded-lg cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* CARNET PRINTABLE CONTAINER */}
-        <div className="p-6 flex flex-col items-center justify-center print:p-4">
-          <div className="w-full max-w-[340px] bg-gradient-to-br from-white to-slate-50 border-2 border-[#003366] rounded-2xl p-4 shadow-md relative overflow-hidden text-slate-800">
+        {/* CARNET PRINTABLE CONTAINER (Optimizado para A4 con guías de corte) */}
+        <div className="p-6 flex flex-col items-center justify-center print:p-8 print:m-0 print:border-none">
+          {/* Instrucción de corte en hoja A4 (visible solo al imprimir) */}
+          <div className="hidden print:block text-center mb-4">
+            <p className="text-xs font-bold text-slate-700 uppercase tracking-widest">
+              REPÚBLICA DE PANAMÁ &bull; MINISTERIO DE EDUCACIÓN &bull; CARNET ESTUDIANTIL
+            </p>
+            <p className="text-[9px] text-slate-500">
+              Impresión oficial en hoja A4 &bull; Recortar por la línea punteada para plastificar
+            </p>
+          </div>
+
+          <div className="w-full max-w-[340px] bg-gradient-to-br from-white to-slate-50 border-2 border-[#003366] rounded-2xl p-4 shadow-md relative overflow-hidden text-slate-800 print:shadow-none print:border-2 print:border-[#003366]">
             {/* Top header on card */}
             <div className="bg-[#003366] text-white -mx-4 -mt-4 px-4 py-2.5 flex items-center gap-2 mb-3">
               <School className="w-5 h-5 text-[#FFC107] shrink-0" />

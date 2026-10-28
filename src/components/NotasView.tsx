@@ -17,6 +17,7 @@ import {
   ArrowRight,
   ExternalLink,
   Lock,
+  Printer,
 } from 'lucide-react';
 import {
   GRADOS,
@@ -114,6 +115,7 @@ export const NotasView: React.FC<NotasViewProps> = ({
   const [trimestreSeleccionado, setTrimestreSeleccionado] = useState<number>(
     db.trimestreActual
   );
+  const [modalImprimirActaA4, setModalImprimirActaA4] = useState(false);
 
   // Verificar autorización de la selección actual
   const esGrupoAutorizado = gruposPermitidos.some(
@@ -436,13 +438,23 @@ export const NotasView: React.FC<NotasViewProps> = ({
             </p>
           </div>
 
-          <button
-            onClick={exportarPlanillaCSV}
-            className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition border border-slate-200"
-          >
-            <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>Descargar Planilla (CSV)</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setModalImprimirActaA4(true)}
+              className="inline-flex items-center gap-1.5 bg-[#003366] hover:bg-[#002244] text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+              title="Imprimir Acta Oficial de Calificaciones en formato A4 Horizontal"
+            >
+              <Printer className="w-3.5 h-3.5 text-[#FFC107]" />
+              <span>Imprimir Acta A4</span>
+            </button>
+            <button
+              onClick={exportarPlanillaCSV}
+              className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition border border-slate-200"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-500" />
+              <span>Descargar Planilla (CSV)</span>
+            </button>
+          </div>
         </div>
 
         {/* Banner de rol docente */}
@@ -1300,6 +1312,153 @@ export const NotasView: React.FC<NotasViewProps> = ({
         </div>
       )}
         </>
+      )}
+
+      {/* MODAL DE IMPRESIÓN OFICIAL DEL ACTA DE CALIFICACIONES EN FORMATO A4 */}
+      {modalImprimirActaA4 && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/85 backdrop-blur-xs flex flex-col items-center p-2 sm:p-4 print:p-0 print:bg-white print:static print:inset-auto">
+          {/* Barra de herramientas (no-print) */}
+          <div className="w-full max-w-5xl bg-[#003366] text-white p-3 sm:px-6 sm:py-3.5 rounded-t-2xl shadow-xl flex items-center justify-between no-print sticky top-2 z-50 border border-blue-400/30">
+            <div className="flex items-center gap-2.5">
+              <Printer className="w-5 h-5 text-[#FFC107]" />
+              <div>
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  Acta Oficial de Calificaciones Trimestrales
+                  <span className="text-[10px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded uppercase">
+                    A4 Horizontal
+                  </span>
+                </h3>
+                <p className="text-[11px] text-blue-200">
+                  {materiaSeleccionada} &bull; Grado {gradoSeleccionado} &ldquo;{grupoSeleccionado}&rdquo; &bull; Trimestre {trimestreSeleccionado}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => window.print()}
+                className="bg-[#FFC107] hover:bg-amber-400 text-slate-950 font-black text-xs py-2 px-4 rounded-xl flex items-center gap-1.5 transition shadow-md cursor-pointer"
+                title="Imprimir acta en papel A4 horizontal"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Imprimir Acta A4</span>
+              </button>
+              <button
+                onClick={() => setModalImprimirActaA4(false)}
+                className="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10 cursor-pointer"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Acta Oficial Impresa en A4 Horizontal */}
+          <div className="w-full max-w-5xl bg-white rounded-b-2xl p-6 sm:p-8 space-y-4 print:p-2 print:m-0 print:border-none print:shadow-none print-landscape print-page">
+            {/* Membrete Oficial */}
+            <div className="text-center border-b-2 border-[#003366] pb-3 print:pb-1.5">
+              <div className="inline-block mb-1 print:mb-0.5">
+                <span className="text-[11px] font-extrabold tracking-widest text-[#003366] uppercase block print:text-[8.5px]">
+                  REPÚBLICA DE PANAMÁ &bull; GOBIERNO NACIONAL
+                </span>
+                <span className="text-xs font-bold text-slate-700 uppercase block print:text-[8px]">
+                  MINISTERIO DE EDUCACIÓN &bull; DIRECCIÓN GENERAL DE EDUCACIÓN
+                </span>
+                <span className="text-xs text-slate-600 block print:text-[8px]">
+                  {db.escuela.regionEducativa} &bull; {db.escuela.nombrePlantel}
+                </span>
+              </div>
+              <h1 className="text-lg font-black text-[#003366] uppercase tracking-wide mt-1 print:text-sm">
+                ACTA OFICIAL DE REGISTRO DE CALIFICACIONES
+              </h1>
+              <p className="text-xs font-bold text-slate-600 uppercase tracking-wider print:text-[8px]">
+                EDUCACIÓN PRIMARIA &bull; AÑO LECTIVO {db.annoLectivo}
+              </p>
+            </div>
+
+            {/* Metadatos */}
+            <div className="grid grid-cols-4 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-200 print:bg-white print:border-slate-300 print:p-1.5 print:text-[9px]">
+              <div>
+                <span className="text-slate-400 font-bold uppercase block text-[8px]">Asignatura:</span>
+                <span className="font-extrabold text-[#003366]">{materiaSeleccionada}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold uppercase block text-[8px]">Grado y Grupo:</span>
+                <span className="font-bold text-slate-800">{gradoSeleccionado} &ldquo;{grupoSeleccionado}&rdquo;</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold uppercase block text-[8px]">Período:</span>
+                <span className="font-bold text-slate-800">Trimestre {trimestreSeleccionado}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold uppercase block text-[8px]">Docente Responsable:</span>
+                <span className="font-bold text-slate-800">{docenteActivo.nombre}</span>
+              </div>
+            </div>
+
+            {/* Tabla Oficial de Alumnos y Calificaciones */}
+            <table className="w-full text-left border-collapse text-xs border border-slate-300 print:text-[8.5px]">
+              <thead>
+                <tr className="bg-[#003366] text-white text-[10px] font-bold uppercase text-center print:text-[8px]">
+                  <th className="py-1.5 px-2 w-8">N°</th>
+                  <th className="py-1.5 px-3 text-left">Estudiante</th>
+                  <th className="py-1.5 px-2 w-28">Cédula</th>
+                  <th className="py-1.5 px-2 w-24">Notas Diarias</th>
+                  <th className="py-1.5 px-2 w-28">Promedio Trimestral</th>
+                  <th className="py-1.5 px-2 w-28">Condición Final</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {estudiantesFiltrados.map((est, idx) => {
+                  const prom = calcularPromedioTrimestre(est.id, materiaSeleccionada, trimestreSeleccionado, db.calificaciones, db.annoLectivo);
+                  const cal = db.calificaciones.find(c => c.estudianteId === est.id && c.materia === materiaSeleccionada && c.trimestre === trimestreSeleccionado && c.annoLectivo === db.annoLectivo);
+                  const cant = cal?.notasDiarias?.length || 0;
+                  return (
+                    <tr key={est.id} className="hover:bg-slate-50">
+                      <td className="py-1 px-2 text-center text-slate-400 border-r border-slate-200">{idx + 1}</td>
+                      <td className="py-1 px-3 font-semibold text-slate-800 border-r border-slate-200">{est.nombre}</td>
+                      <td className="py-1 px-2 font-mono text-slate-600 border-r border-slate-200 text-center">{est.cedula}</td>
+                      <td className="py-1 px-2 text-center border-r border-slate-200 font-bold text-slate-700">{cant}</td>
+                      <td className="py-1 px-2 text-center font-black border-r border-slate-200">
+                        {prom !== null ? (
+                          <span className={prom >= 3.0 ? 'text-slate-900' : 'text-rose-600'}>
+                            {prom.toFixed(1)}
+                          </span>
+                        ) : '—'}
+                      </td>
+                      <td className="py-1 px-2 text-center font-bold">
+                        {prom !== null ? (
+                          prom >= 3.0 ? (
+                            <span className="text-emerald-700">Aprobado</span>
+                          ) : (
+                            <span className="text-rose-600">Reprobado</span>
+                          )
+                        ) : (
+                          <span className="text-slate-400">Pendiente</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Firmas en A4 Landscape */}
+            <div className="grid grid-cols-2 gap-12 pt-8 text-center text-xs print:pt-4 avoid-break">
+              <div>
+                <div className="border-t border-slate-400 pt-1 w-3/4 mx-auto">
+                  <p className="font-bold text-slate-800">{docenteActivo.nombre}</p>
+                  <p className="text-[10px] text-slate-500 uppercase">Docente Titular de la Asignatura</p>
+                </div>
+              </div>
+              <div>
+                <div className="border-t border-slate-400 pt-1 w-3/4 mx-auto">
+                  <p className="font-bold text-slate-800">{db.escuela.director}</p>
+                  <p className="text-[10px] text-slate-500 uppercase">Director(a) del Plantel Educativo</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

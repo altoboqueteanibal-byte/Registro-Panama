@@ -9,6 +9,8 @@ import {
   ArrowRight,
   ShieldCheck,
   User,
+  X,
+  Layers,
 } from 'lucide-react';
 import { GRADOS, GRUPOS, Docente, GrupoAsignado } from '../types';
 import { AppDatabase } from '../utils/storage';
@@ -17,6 +19,7 @@ import {
   calcularPromedioGeneralAnual,
   calcularAsistenciaEstudiante,
 } from '../utils/calculations';
+import { BoletinHojaA4 } from './BoletinHojaA4';
 
 interface BoletinesViewProps {
   db: AppDatabase;
@@ -55,6 +58,7 @@ export const BoletinesView: React.FC<BoletinesViewProps> = ({
   const [gradoSeleccionado, setGradoSeleccionado] = useState<string>(defaultGrado);
   const [grupoSeleccionado, setGrupoSeleccionado] = useState<string>(defaultGrupo);
   const [busqueda, setBusqueda] = useState('');
+  const [modalImpresionLoteA4, setModalImpresionLoteA4] = useState(false);
 
   React.useEffect(() => {
     if (docenteActivo) {
@@ -96,19 +100,35 @@ export const BoletinesView: React.FC<BoletinesViewProps> = ({
       )}
 
       {/* Header */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[#003366]" />
-            Emisión de Boletines Oficiales de Primaria
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-[#003366]" />
+              Emisión de Boletines Oficiales de Primaria
+            </h2>
+            <span className="hidden sm:inline-block text-[10px] font-extrabold bg-blue-100 text-[#003366] px-2 py-0.5 rounded-md uppercase">
+              Formato A4
+            </span>
+          </div>
           <p className="text-xs text-slate-500">
-            Generación e impresión de libretas de calificaciones con formato normado por MEDUCA.
+            Generación e impresión de libretas de calificaciones normalizadas en papel A4 (210 x 297 mm).
           </p>
         </div>
 
-        {/* Filtros rápidos */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        {/* Acciones y Filtros rápidos */}
+        <div className="flex flex-wrap items-center gap-2 text-xs w-full lg:w-auto">
+          {/* Botón de Impresión de Grupo Completo en Lote A4 */}
+          <button
+            onClick={() => setModalImpresionLoteA4(true)}
+            disabled={estudiantesFiltrados.length === 0}
+            className="bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold py-2 px-3.5 rounded-xl flex items-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
+            title="Imprimir todos los boletines de este grupo en hojas A4 consecutivas"
+          >
+            <Printer className="w-4 h-4 text-[#FFC107]" />
+            <span>Imprimir Grupo en A4 ({estudiantesFiltrados.length})</span>
+          </button>
+
           {docenteActivo && esConsejero ? (
             <div className="p-2 bg-slate-100 border border-slate-300 rounded-lg font-bold text-slate-800">
               Grado {gradoSeleccionado} &ldquo;{grupoSeleccionado}&rdquo; (Consejería)
@@ -277,10 +297,10 @@ export const BoletinesView: React.FC<BoletinesViewProps> = ({
                 <div className="mt-4 pt-3 border-t border-slate-100">
                   <button
                     onClick={() => onOpenBoletin(est.id)}
-                    className="w-full bg-[#003366] hover:bg-[#002244] text-white py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs"
+                    className="w-full bg-[#003366] hover:bg-[#002244] text-white py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                   >
                     <Printer className="w-3.5 h-3.5 text-[#FFC107]" />
-                    <span>Ver Boletín Oficial</span>
+                    <span>Ver Boletín A4 Individual</span>
                   </button>
                 </div>
               </div>
@@ -288,6 +308,59 @@ export const BoletinesView: React.FC<BoletinesViewProps> = ({
           })
         )}
       </div>
+
+      {/* MODAL DE IMPRESIÓN MASIVA EN FORMATO A4 */}
+      {modalImpresionLoteA4 && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/85 backdrop-blur-xs flex flex-col items-center p-2 sm:p-4 print:p-0 print:bg-white print:static print:inset-auto">
+          {/* Header de herramientas de impresión (no-print) */}
+          <div className="w-full max-w-4xl bg-[#003366] text-white p-3 sm:px-6 sm:py-3.5 rounded-t-2xl shadow-2xl flex flex-wrap items-center justify-between gap-3 no-print sticky top-2 z-50 border border-blue-400/30">
+            <div className="flex items-center gap-2.5">
+              <Printer className="w-5 h-5 text-[#FFC107]" />
+              <div>
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  Impresión Masiva de Boletines Oficiales en A4
+                  <span className="text-[10px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded uppercase">
+                    A4 Paginado
+                  </span>
+                </h3>
+                <p className="text-[11px] text-blue-200">
+                  Grado {gradoSeleccionado} &ldquo;{grupoSeleccionado}&rdquo; &bull; {estudiantesFiltrados.length} Estudiantes (1 hoja A4 por alumno)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => window.print()}
+                className="bg-[#FFC107] hover:bg-amber-400 text-slate-950 font-black text-xs py-2 px-4 rounded-xl flex items-center gap-2 transition shadow-md cursor-pointer"
+                title="Imprimir todos los boletines en hojas A4 independientes"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Imprimir Todo el Lote A4 ({estudiantesFiltrados.length} Hojas)</span>
+              </button>
+              <button
+                onClick={() => setModalImpresionLoteA4(false)}
+                className="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10 cursor-pointer"
+                title="Cerrar vista de impresión en lote"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Listado de boletines en hojas A4 consecutivas */}
+          <div className="w-full max-w-4xl bg-slate-200/60 rounded-b-2xl p-4 space-y-6 print:p-0 print:m-0 print:bg-white print:space-y-0 print:max-w-none">
+            {estudiantesFiltrados.map((est) => (
+              <BoletinHojaA4
+                key={est.id}
+                db={db}
+                estudiante={est}
+                esHojaUnica={false}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
